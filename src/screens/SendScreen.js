@@ -7,6 +7,7 @@ import {
   StatusBar,
   Dimensions,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import { useTCP } from '../service/TCPProvider';
@@ -18,7 +19,9 @@ import { Colors } from '../utils/Constants';
 import QRScannerModal from '../components/modals/QRScannerModal';
 import LottieView from 'lottie-react-native';
 import { goBack, navigate } from '../utils/NavigationUtil';
+import DeviceInfo from 'react-native-device-info';
 import dgram from 'react-native-udp';
+import { getBroadcastIPAddress, getLocalIPAddress } from '../utils/networkUtils';
 
 const { width, height } = Dimensions.get('window');
 
@@ -160,15 +163,35 @@ const SendScreen = () => {
     }
   }, [isConnected]);
 
+  // If already connected when screen mounts (user navigated here while connected)
+  // redirect immediately without waiting for isConnected change
+  useEffect(() => {
+    if (isConnected) {
+      navigate('ConnectionScreen');
+    }
+  }, []);
+
   const listenForDevices = async () => {
     const server = dgram.createSocket({
       type: 'udp4',
       reusePort: true,
     });
 
+    // Must add error listener BEFORE any async ops — an unhandled 'error'
+    // event crashes the entire app (Node.js behaviour).
+    server.on('error', err => {
+      console.log('UDP listener error:', err?.message || err);
+    });
+
     const port = 57143;
 
-    server.bind(port, () => { });
+    server.bind(port, () => {
+      try {
+        server.setBroadcast(true);
+      } catch (e) {
+        console.log('setBroadcast skipped:', e?.message);
+      }
+    });
 
     server.on('message', (msg, rinfo) => {
       const messageStr = msg?.toString() || '';
@@ -669,6 +692,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scanButton: {
+    position: 'absolute',
+    bottom: 40,
+    alignSelf: 'center',
+    shadowColor: '#0072FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+    borderRadius: 35,
   },
   profileGlow: {
     position: 'absolute',

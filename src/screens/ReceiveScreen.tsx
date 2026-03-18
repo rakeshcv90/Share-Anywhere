@@ -353,6 +353,12 @@ const ReceiveScreen = () => {
       reusePort: true,
     });
 
+    // Prevent unhandled error events from crashing the app
+    (client as any).on('error', (err: any) => {
+      console.log('Discovery socket error:', err?.message || err);
+      try { client.close(); } catch (_) {}
+    });
+
     client.bind(() => {
       try {
         if (Platform.OS === 'ios') {
@@ -378,16 +384,22 @@ const ReceiveScreen = () => {
         );
       } catch (error) {
         console.error('Failed to set broadcast or send', error);
-        client.close();
+        try { client.close(); } catch (_) {}
       }
     });
   };
 
   useEffect(() => {
-    if (!qrValue) return;
+    if (!qrValue || isScannerVisible) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
 
     sendDiscoverySignal();
-    intervalRef.current = setInterval(sendDiscoverySignal, 3000);
+    intervalRef.current = setInterval(sendDiscoverySignal, 1000);
 
     return () => {
       if (intervalRef.current) {
@@ -395,7 +407,7 @@ const ReceiveScreen = () => {
         intervalRef.current = null;
       }
     };
-  }, [qrValue]);
+  }, [qrValue, isScannerVisible]);
 
   const handleGoBack = () => {
     Animated.timing(fadeAnim, {
@@ -421,6 +433,13 @@ const ReceiveScreen = () => {
     }
   }, [isConnected]);
 
+  // If already connected when screen mounts, redirect immediately
+  useEffect(() => {
+    if (isConnected) {
+      navigate('ConnectionScreen');
+    }
+  }, []);
+
   useEffect(() => {
     setupServer();
   }, []);
@@ -435,9 +454,19 @@ const ReceiveScreen = () => {
     outputRange: [1, 1.5, 2],
   });
 
+  const waveScaleInner = waveAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.8, 1.2, 1.6],
+  });
+
   const waveOpacity = waveAnim.interpolate({
     inputRange: [0, 0.5, 1],
     outputRange: [0.5, 0.3, 0],
+  });
+
+  const waveOpacityInner = waveAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.35, 0.21, 0], // 0.7 * waveOpacity
   });
 
   return (
@@ -577,8 +606,8 @@ const ReceiveScreen = () => {
                     width: lottieSize,
                     height: lottieSize,
                     borderRadius: lottieSize / 2,
-                    transform: [{ scale: Animated.multiply(waveScale, 0.8) }],
-                    opacity: Animated.multiply(waveOpacity, 0.7),
+                    transform: [{ scale: waveScaleInner }],
+                    opacity: waveOpacityInner,
                   },
                 ]}
               />
@@ -626,13 +655,15 @@ const ReceiveScreen = () => {
 
               {/* Lottie Container */}
               <View style={[receiveStyles.lottieContainer, { width: lottieSize, height: lottieSize }]}>
-                <LottieView
-                  style={receiveStyles.lottie}
-                  source={require('../assets/animations/scan2.json')}
-                  autoPlay
-                  loop={true}
-                  hardwareAccelerationAndroid
-                />
+                {!isScannerVisible && (
+                  <LottieView
+                    style={receiveStyles.lottie}
+                    source={require('../assets/animations/scan2.json')}
+                    autoPlay
+                    loop={true}
+                    hardwareAccelerationAndroid
+                  />
+                )}
 
                 {/* Center Profile */}
                 <View style={receiveStyles.profileContainer}>
@@ -685,15 +716,12 @@ const ReceiveScreen = () => {
             </View>
           </Animated.View>
         </SafeAreaView>
-
-        {isScannerVisible && (
-          <QRGenerateModal
-            visible={isScannerVisible}
-            onClose={() => setIsScannerVisible(false)}
-            qrValue={qrValue}
-          />
-        )}
       </LinearGradient>
+
+      <QRGenerateModal
+        visible={isScannerVisible}
+        onClose={() => setIsScannerVisible(false)}
+      />
     </>
   );
 };

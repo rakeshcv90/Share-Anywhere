@@ -1,515 +1,10 @@
-// // import React, { useCallback, useEffect, useState } from 'react';
-// // import {
-// //   View,
-// //   Text,
-// //   Platform,
-// //   ActivityIndicator,
-// //   FlatList,
-// //   TouchableOpacity,
-// //   StatusBar,
-// // } from 'react-native';
-// // import RNFS from 'react-native-fs';
-// // import Icon from '../components/global/Icon';
-// // import LinearGradient from 'react-native-linear-gradient';
-// // import { SafeAreaView } from 'react-native-safe-area-context';
-// // import { sendStyles } from '../styles/sendStyles';
-// // import { connectionStyles } from '../styles/connectionStyles';
-// // import CustomeText from '../components/global/CustomeText';
-// // import { Colors } from '../utils/Constants';
-// // import { formatFileSize } from '../utils/libraryHelpers';
-// // import ReactNativeBlobUtil from 'react-native-blob-util';
-// // import { goBack } from '../utils/NavigationUtil';
-// // import { useFocusEffect } from '@react-navigation/native';
-
-// // const ReceivedFileScreen = () => {
-// //   const [receivedFiles, setReceivedFiles] = useState([]);
-// //   const [isLoading, setIsLoading] = useState(true);
-
-// //   const getMimeType = ext => {
-// //     const e = ext?.replace('.', '').toLowerCase();
-
-// //     switch (e) {
-// //       case 'jpg':
-// //       case 'jpeg':
-// //         return 'image/jpeg';
-// //       case 'png':
-// //         return 'image/png';
-// //       case 'mp4':
-// //         return 'video/mp4';
-// //       case 'mp3':
-// //         return 'audio/mpeg';
-// //       case 'pdf':
-// //         return 'application/pdf';
-// //       default:
-// //         return '*/*';
-// //     }
-// //   };
-
-// //   const getFilesFromDirectory = async () => {
-// //     setIsLoading(true);
-
-// //     const platformPath =
-// //       Platform.OS === 'android'
-// //         ? RNFS.ExternalDirectoryPath
-// //         : RNFS.DocumentDirectoryPath;
-
-// //     try {
-// //       const exists = await RNFS.exists(platformPath);
-
-// //       if (!exists) {
-// //         setReceivedFiles([]);
-// //         setIsLoading(false);
-// //         return;
-// //       }
-
-// //       const files = await RNFS.readDir(platformPath);
-
-// //       const formattedFiles = files
-// //         .filter(file => file.isFile())
-// //         .filter(file => !file.name.startsWith('.'))
-// //         .filter(file => file.size > 0)
-// //         .map(file => ({
-// //           id: file.name,
-// //           name: file.name,
-// //           size: file.size,
-// //           uri: file.path,
-// //           mimeType: file.name.split('.').pop() || 'unknown',
-// //         }));
-
-// //       setReceivedFiles(formattedFiles);
-// //     } catch (error) {
-// //       console.error('Error fetching files:', error);
-// //       setReceivedFiles([]);
-// //     } finally {
-// //       setIsLoading(false);
-// //     }
-// //   };
-
-// //   useFocusEffect(
-// //     useCallback(() => {
-// //       getFilesFromDirectory();
-// //     }, []),
-// //   );
-
-// //   const renderThumbnail = mimeType => {
-// //     const ext = mimeType?.replace('.', '').toLowerCase();
-
-// //     switch (ext) {
-// //       case 'mp3':
-// //         return (
-// //           <Icon
-// //             name="musical-notes"
-// //             size={16}
-// //             color="blue"
-// //             iconFamily="Ionicons"
-// //           />
-// //         );
-
-// //       case 'mp4':
-// //         return (
-// //           <Icon name="videocam" size={16} color="green" iconFamily="Ionicons" />
-// //         );
-
-// //       case 'jpg':
-// //       case 'jpeg':
-// //       case 'png':
-// //         return (
-// //           <Icon name="image" size={16} color="orange" iconFamily="Ionicons" />
-// //         );
-
-// //       case 'pdf':
-// //         return (
-// //           <Icon name="document" size={16} color="red" iconFamily="Ionicons" />
-// //         );
-
-// //       default:
-// //         return (
-// //           <Icon name="folder" size={16} color="gray" iconFamily="Ionicons" />
-// //         );
-// //     }
-// //   };
-// //   const renderItem = ({ item }) => (
-// //     <View style={connectionStyles.fileItem}>
-// //       <View style={connectionStyles.fileInfoContainer}>
-// //         {renderThumbnail(item?.mimeType)}
-
-// //         <View style={connectionStyles.fileDetails}>
-// //           <CustomeText numberOfLines={1} fontFamily="Okra-Bold" fontSize={10}>
-// //             {item.name}
-// //           </CustomeText>
-
-// //           <CustomeText numberOfLines={1} fontFamily="Okra-Medium" fontSize={8}>
-// //             {item.mimeType} • {formatFileSize(item.size)}
-// //           </CustomeText>
-// //         </View>
-// //       </View>
-// //       <TouchableOpacity
-// //         style={connectionStyles.openButton}
-// //         onPress={() => {
-// //           const normalizedPath =
-// //             Platform.OS === 'ios' ? `file://${item?.uri}` : item?.uri;
-
-// //           if (Platform.OS === 'ios') {
-// //             ReactNativeBlobUtil.ios
-// //               .openDocument(normalizedPath)
-// //               .then(() => console.log('File opened successfully'))
-// //               .catch(err => console.error('Error opening file:', err));
-// //           } else {
-// //             ReactNativeBlobUtil.android
-// //               .actionViewIntent(normalizedPath, getMimeType(item.mimeType))
-// //               .then(() => console.log('File opened successfully'))
-// //               .catch(err => console.error('Error opening file:', err));
-// //           }
-// //         }}
-// //       >
-// //         <CustomeText
-// //           numberOfLines={1}
-// //           fontFamily="Okra-Bold"
-// //           fontSize={10}
-// //           color={'#fff'}
-// //         >
-// //           Open
-// //         </CustomeText>
-// //       </TouchableOpacity>
-// //     </View>
-// //   );
-// //   return (
-// //     <>
-// //       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-// //       <LinearGradient
-// //         colors={['#ffffff', '#CDDAEE', '#8DBAFF']}
-// //         style={sendStyles.container}
-// //       >
-// //         <SafeAreaView style={{ flex: 1 }}>
-// //           <View style={sendStyles.mainContainer}>
-// //             {/* Title */}
-// //             <CustomeText
-// //               fontFamily="Okra-Bold"
-// //               fontSize={15}
-// //               color="#000"
-// //               style={{ textAlign: 'center', margin: 10 }}
-// //             >
-// //               All Received Files
-// //             </CustomeText>
-
-// //             {isLoading ? (
-// //               <ActivityIndicator size="small" color={Colors.primary} />
-// //             ) : receivedFiles.length > 0 ? (
-// //               <View style={{ flex: 1 }}>
-// //                 <FlatList
-// //                   data={receivedFiles}
-// //                   keyExtractor={item => item.id}
-// //                   renderItem={renderItem}
-// //                   contentContainerStyle={connectionStyles.fileList}
-// //                 />
-// //               </View>
-// //             ) : (
-// //               <View style={connectionStyles.noDataContainer}>
-// //                 <CustomeText
-// //                   numberOfLines={1}
-// //                   fontFamily="Okra-Medium"
-// //                   fontSize={11}
-// //                 >
-// //                   No files received yet.
-// //                 </CustomeText>
-// //               </View>
-// //             )}
-// //             <TouchableOpacity onPress={goBack} style={sendStyles.backButton}>
-// //               <Icon
-// //                 name="arrow-back"
-// //                 iconFamily="Ionicons"
-// //                 size={16}
-// //                 color="#000"
-// //               />
-// //             </TouchableOpacity>
-// //           </View>
-// //         </SafeAreaView>
-// //       </LinearGradient>
-// //     </>
-// //   );
-// // };
-
-// // export default ReceivedFileScreen;
-
-// import React, { useCallback, useState, useRef, useEffect } from 'react';
-// import {
-//   View,
-//   FlatList,
-//   TouchableOpacity,
-//   StatusBar,
-//   Platform,
-//   Animated,
-//   Dimensions,
-//   ActivityIndicator,
-// } from 'react-native';
-// import RNFS from 'react-native-fs';
-// import Icon from '../components/global/Icon';
-// import LinearGradient from 'react-native-linear-gradient';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-// import { formatFileSize } from '../utils/libraryHelpers';
-// import ReactNativeBlobUtil from 'react-native-blob-util';
-// import { goBack } from '../utils/NavigationUtil';
-// import CustomeText from '../components/global/CustomeText';
-// import { Colors } from '../utils/Constants';
-// import { connectionStyles } from '../styles/connectionStyles';
-
-// const { width } = Dimensions.get('window');
-
-// const AnimatedCard = Animated.createAnimatedComponent(TouchableOpacity);
-
-// const ReceivedFileScreen = () => {
-//   const [receivedFiles, setReceivedFiles] = useState([]);
-//   const [isLoading, setIsLoading] = useState(true);
-
-//   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-//   const getMimeType = ext => {
-//     const e = ext?.replace('.', '').toLowerCase();
-//     switch (e) {
-//       case 'jpg':
-//       case 'jpeg':
-//         return 'image/jpeg';
-//       case 'png':
-//         return 'image/png';
-//       case 'mp4':
-//         return 'video/mp4';
-//       case 'mp3':
-//         return 'audio/mpeg';
-//       case 'pdf':
-//         return 'application/pdf';
-//       default:
-//         return '*/*';
-//     }
-//   };
-
-//   const getFilesFromDirectory = async () => {
-//     setIsLoading(true);
-//     const platformPath =
-//       Platform.OS === 'android'
-//         ? RNFS.ExternalDirectoryPath
-//         : RNFS.DocumentDirectoryPath;
-
-//     try {
-//       const exists = await RNFS.exists(platformPath);
-
-//       if (!exists) {
-//         setReceivedFiles([]);
-//         setIsLoading(false);
-//         return;
-//       }
-
-//       const files = await RNFS.readDir(platformPath);
-
-//       const formattedFiles = files
-//         .filter(file => file.isFile())
-//         .filter(file => !file.name.startsWith('.'))
-//         .filter(file => file.size > 0)
-//         .map(file => ({
-//           id: file.name,
-//           name: file.name,
-//           size: file.size,
-//           uri: file.path,
-//           mimeType: file.name.split('.').pop() || 'unknown',
-//         }));
-
-//       setReceivedFiles(formattedFiles);
-//     } catch (error) {
-//       console.error('Error fetching files:', error);
-//       setReceivedFiles([]);
-//     } finally {
-//       setIsLoading(false);
-//       Animated.timing(fadeAnim, {
-//         toValue: 1,
-//         duration: 800,
-//         useNativeDriver: true,
-//       }).start();
-//     }
-//   };
-
-//   useEffect(() => {
-//     getFilesFromDirectory();
-//   }, []);
-
-//   const renderIcon = mimeType => {
-//     const ext = mimeType?.replace('.', '').toLowerCase();
-//     let colors = ['#D8B4FE', '#9333EA'];
-//     let iconName = 'folder';
-//     switch (ext) {
-//       case 'mp3':
-//         iconName = 'musical-notes';
-//         colors = ['#67E8F9', '#06B6D4'];
-//         break;
-//       case 'mp4':
-//         iconName = 'videocam';
-//         colors = ['#FCD34D', '#F59E0B'];
-//         break;
-//       case 'jpg':
-//       case 'jpeg':
-//       case 'png':
-//         iconName = 'image';
-//         colors = ['#6EE7B7', '#10B981'];
-//         break;
-//       case 'pdf':
-//         iconName = 'document';
-//         colors = ['#F87171', '#DC2626'];
-//         break;
-//     }
-
-//     return (
-//       <LinearGradient
-//         colors={colors}
-//         style={{
-//           width: 50,
-//           height: 50,
-//           borderRadius: 25,
-//           justifyContent: 'center',
-//           alignItems: 'center',
-//         }}
-//       >
-//         <Icon name={iconName} size={24} color="#fff" iconFamily="Ionicons" />
-//       </LinearGradient>
-//     );
-//   };
-
-//   const renderItem = ({ item, index }) => {
-//     const translateY = fadeAnim.interpolate({
-//       inputRange: [0, 1],
-//       outputRange: [20 + index * 5, 0],
-//     });
-
-//     return (
-//       <AnimatedCard
-//         style={{
-//           flexDirection: 'row',
-//           alignItems: 'center',
-//           justifyContent: 'space-between',
-//           marginHorizontal: 12,
-//           marginVertical: 6,
-//           padding: 12,
-//           borderRadius: 16,
-//           backgroundColor: '#fff',
-//           shadowColor: '#000',
-//           shadowOffset: { width: 0, height: 4 },
-//           shadowOpacity: 0.1,
-//           shadowRadius: 6,
-//           elevation: 5,
-//           transform: [{ translateY }],
-//           opacity: fadeAnim,
-//         }}
-//         onPress={() => {
-//           const normalizedPath =
-//             Platform.OS === 'ios' ? `file://${item?.uri}` : item?.uri;
-
-//           if (Platform.OS === 'ios') {
-//             ReactNativeBlobUtil.ios
-//               .openDocument(normalizedPath)
-//               .catch(console.error);
-//           } else {
-//             ReactNativeBlobUtil.android
-//               .actionViewIntent(normalizedPath, getMimeType(item.mimeType))
-//               .catch(console.error);
-//           }
-//         }}
-//       >
-//         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-//           {renderIcon(item?.mimeType)}
-//           <View style={{ marginLeft: 12, flexShrink: 1 }}>
-//             <CustomeText
-//               fontFamily="Okra-Bold"
-//               fontSize={14}
-//               color="#1E3A8A"
-//               numberOfLines={1}
-//             >
-//               {item.name}
-//             </CustomeText>
-//             <CustomeText
-//               fontFamily="Okra-Medium"
-//               fontSize={12}
-//               color="#6B7280"
-//               numberOfLines={1}
-//             >
-//               {item.mimeType} • {formatFileSize(item.size)}
-//             </CustomeText>
-//           </View>
-//         </View>
-
-//         <LinearGradient
-//           colors={['#3B82F6', '#2563EB']}
-//           style={{
-//             paddingHorizontal: 16,
-//             paddingVertical: 8,
-//             borderRadius: 12,
-//           }}
-//         >
-//           <CustomeText fontFamily="Okra-Bold" fontSize={12} color="#fff">
-//             Open
-//           </CustomeText>
-//         </LinearGradient>
-//       </AnimatedCard>
-//     );
-//   };
-
-//   return (
-//     <>
-//       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-//       <LinearGradient
-//         colors={['#E0F2FE', '#BAE6FD']}
-//         style={{ flex: 1, paddingTop: 16 }}
-//       >
-//         <SafeAreaView style={{ flex: 1 }}>
-//           <CustomeText
-//             fontFamily="Okra-Bold"
-//             fontSize={18}
-//             color="#1E3A8A"
-//             style={{ textAlign: 'center', marginVertical: 16 }}
-//           >
-//             Received Files
-//           </CustomeText>
-
-//           {isLoading ? (
-//             <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 20 }} />
-//           ) : receivedFiles.length > 0 ? (
-//             <FlatList
-//               data={receivedFiles}
-//               keyExtractor={item => item.id}
-//               renderItem={renderItem}
-//               contentContainerStyle={{ paddingBottom: 20 }}
-//             />
-//           ) : (
-//             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 50 }}>
-//               <CustomeText fontFamily="Okra-Medium" fontSize={14} color="#6B7280">
-//                 No files received yet.
-//               </CustomeText>
-//             </View>
-//           )}
-
-//           <TouchableOpacity
-//             onPress={goBack}
-//             style={{
-//               position: 'absolute',
-//               top: 16,
-//               left: 16,
-//               padding: 6,
-//               borderRadius: 8,
-//               backgroundColor: '#fff',
-//               shadowColor: '#000',
-//               shadowOffset: { width: 0, height: 2 },
-//               shadowOpacity: 0.1,
-//               shadowRadius: 4,
-//               elevation: 3,
-//             }}
-//           >
-//             <Icon name="arrow-back" iconFamily="Ionicons" size={20} color="#1E3A8A" />
-//           </TouchableOpacity>
-//         </SafeAreaView>
-//       </LinearGradient>
-//     </>
-//   );
-// };
-
-// export default ReceivedFileScreen;
-
-import React, { useCallback, useState, useRef, useEffect } from 'react';
+import React, {
+  useCallback,
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import {
   View,
   FlatList,
@@ -520,41 +15,79 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
+  Alert,
 } from 'react-native';
+import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
-import Icon from '../components/global/Icon';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatFileSize } from '../utils/libraryHelpers';
-import ReactNativeBlobUtil from 'react-native-blob-util';
-import { goBack } from '../utils/NavigationUtil';
+
+import Icon from '../components/global/Icon';
 import CustomeText from '../components/global/CustomeText';
-import { Colors } from '../utils/Constants';
-import { connectionStyles } from '../styles/connectionStyles';
+import { formatFileSize } from '../utils/libraryHelpers';
+import { goBack } from '../utils/NavigationUtil';
 
-const { width, height } = Dimensions.get('window');
-
+const { height } = Dimensions.get('window');
+const isIOS = Platform.OS === 'ios';
 const AnimatedCard = Animated.createAnimatedComponent(TouchableOpacity);
+
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: 'grid', iconFamily: 'Ionicons' },
+  { id: 'images', label: 'Images', icon: 'image', iconFamily: 'Ionicons' },
+  { id: 'videos', label: 'Videos', icon: 'videocam', iconFamily: 'Ionicons' },
+  {
+    id: 'audio',
+    label: 'Audio',
+    icon: 'musical-notes',
+    iconFamily: 'Ionicons',
+  },
+  { id: 'docs', label: 'Docs', icon: 'document-text', iconFamily: 'Ionicons' },
+];
 
 const ReceivedFileScreen = () => {
   const [receivedFiles, setReceivedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const headerSlideAnim = useRef(new Animated.Value(-50)).current;
   const statsAnim = useRef(new Animated.Value(0)).current;
-  const cardAnimations = useRef([]).current;
+  const cardAnimations = useRef([]);
 
-  // Get total size of all files
-  const totalSize = receivedFiles.reduce((acc, file) => acc + file.size, 0);
+  // Memoized Stats
+  const totalSize = useMemo(
+    () => receivedFiles.reduce((acc, file) => acc + file.size, 0),
+    [receivedFiles],
+  );
+
   const fileCount = receivedFiles.length;
 
+  const filteredFiles = useMemo(() => {
+    if (selectedCategory === 'all') return receivedFiles;
+    return receivedFiles.filter(file => {
+      const ext = file.mimeType?.toLowerCase();
+      switch (selectedCategory) {
+        case 'images':
+          return ['jpg', 'jpeg', 'png', 'gif', 'heic'].includes(ext);
+        case 'videos':
+          return ['mp4', 'mov', 'avi'].includes(ext);
+        case 'audio':
+          return ['mp3', 'wav', 'm4a'].includes(ext);
+        case 'docs':
+          return ['pdf', 'doc', 'docx', 'txt', 'zip', 'rar', '7z'].includes(
+            ext,
+          );
+        default:
+          return true;
+      }
+    });
+  }, [receivedFiles, selectedCategory]);
+
+  // Screen Entrance Animation
   useEffect(() => {
-    // Entrance animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -566,12 +99,6 @@ const ReceivedFileScreen = () => {
         duration: 600,
         useNativeDriver: true,
       }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
       Animated.timing(statsAnim, {
         toValue: 1,
         duration: 1000,
@@ -580,47 +107,44 @@ const ReceivedFileScreen = () => {
     ]).start();
   }, []);
 
+  // Load Files
   const getFilesFromDirectory = async () => {
-    setIsLoading(true);
-    const platformPath =
-      Platform.OS === 'android'
-        ? RNFS.ExternalDirectoryPath
-        : RNFS.DocumentDirectoryPath;
-
     try {
-      const exists = await RNFS.exists(platformPath);
+      setIsLoading(true);
 
+      const directoryPath =
+        Platform.OS === 'android'
+          ? RNFS.ExternalDirectoryPath
+          : RNFS.DocumentDirectoryPath;
+
+      const exists = await RNFS.exists(directoryPath);
       if (!exists) {
         setReceivedFiles([]);
-        setIsLoading(false);
         return;
       }
 
-      const files = await RNFS.readDir(platformPath);
+      const files = await RNFS.readDir(directoryPath);
 
       const formattedFiles = files
-        .filter(file => file.isFile())
-        .filter(file => !file.name.startsWith('.'))
-        .filter(file => file.size > 0)
-        .map((file, index) => ({
-          id: file.name,
+        .filter(
+          file => file.isFile() && !file.name.startsWith('.') && file.size > 0,
+        )
+        .map(file => ({
+          id: file.path,
           name: file.name,
           size: file.size,
           uri: file.path,
           mimeType: file.name.split('.').pop() || 'unknown',
-          modifiedTime: file.mtime || new Date(),
+          modifiedTime: new Date(file.mtime || 0).getTime(),
         }))
-        .sort((a, b) => b.modifiedTime - a.modifiedTime); // Sort by newest first
+        .sort((a, b) => b.modifiedTime - a.modifiedTime);
+
+      // Create animations safely
+      cardAnimations.current = formattedFiles.map(() => new Animated.Value(0));
 
       setReceivedFiles(formattedFiles);
-
-      // Create animation values for cards
-      cardAnimations.length = 0;
-      formattedFiles.forEach(() => {
-        cardAnimations.push(new Animated.Value(0));
-      });
     } catch (error) {
-      console.error('Error fetching files:', error);
+      console.log('File Load Error:', error);
       setReceivedFiles([]);
     } finally {
       setIsLoading(false);
@@ -628,33 +152,33 @@ const ReceivedFileScreen = () => {
     }
   };
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    getFilesFromDirectory();
-  }, []);
-
   useEffect(() => {
     getFilesFromDirectory();
   }, []);
 
-  // Animate cards sequentially when files load
+  // Stagger Card Animation
   useEffect(() => {
-    if (!isLoading && receivedFiles.length > 0) {
+    if (receivedFiles.length > 0 && !isLoading) {
       Animated.stagger(
-        100,
-        cardAnimations.map(anim =>
+        60,
+        cardAnimations.current.map(anim =>
           Animated.timing(anim, {
             toValue: 1,
-            duration: 500,
+            duration: 400,
             useNativeDriver: true,
           }),
         ),
       ).start();
     }
-  }, [isLoading, receivedFiles.length]);
+  }, [receivedFiles, isLoading]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getFilesFromDirectory();
+  }, []);
 
   const getFileIcon = mimeType => {
-    const ext = mimeType?.replace('.', '').toLowerCase();
+    const ext = mimeType?.toLowerCase();
     let iconName = 'document';
     let gradientColors = ['#94A3B8', '#64748B'];
 
@@ -698,24 +222,102 @@ const ReceivedFileScreen = () => {
 
     return { iconName, gradientColors };
   };
-  const getMimeType = ext => {
-    const e = ext?.replace('.', '').toLowerCase();
-    switch (e) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'mp4':
-        return 'video/mp4';
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'pdf':
-        return 'application/pdf';
-      default:
-        return '*/*';
+
+  const openFile = file => {
+    const path = isIOS ? `file://${file.uri}` : file.uri;
+    const extension = file.mimeType?.toLowerCase();
+
+    let mime = '*/*';
+    if (['jpg', 'jpeg', 'png'].includes(extension))
+      mime = 'image/' + (extension === 'jpg' ? 'jpeg' : extension);
+    if (['mp4', 'mov'].includes(extension)) mime = 'video/mp4';
+    if (['mp3', 'wav'].includes(extension)) mime = 'audio/mpeg';
+
+    if (isIOS) {
+      ReactNativeBlobUtil.ios.openDocument(path).catch(console.log);
+    } else {
+      ReactNativeBlobUtil.android
+        .actionViewIntent(path, mime)
+        .catch(console.log);
     }
   };
+
+  const deleteFile = async file => {
+    Alert.alert(
+      'Delete File',
+      `Are you sure you want to delete "${file.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await RNFS.unlink(file.uri);
+              getFilesFromDirectory(); // Refresh list
+            } catch (error) {
+              console.log('Delete Error:', error);
+              Alert.alert('Error', 'Could not delete file');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const shareFile = async file => {
+    try {
+      if (!file || !file.uri) {
+        Alert.alert('Error', 'File path is missing');
+        return;
+      }
+
+      const fileExists = await RNFS.exists(file.uri);
+      if (!fileExists) {
+        Alert.alert('Error', 'File does not exist on disk');
+        return;
+      }
+
+      // Ensure path has file:// scheme for local files
+      const path = file.uri.startsWith('file://')
+        ? file.uri
+        : `file://${file.uri}`;
+      const extension = file.name?.split('.').pop().toLowerCase() || '';
+
+      let mime = '*/*';
+      if (['jpg', 'jpeg', 'png', 'gif'].includes(extension))
+        mime = 'image/' + (extension === 'jpg' ? 'jpeg' : extension);
+      else if (['mp4', 'mov', 'avi'].includes(extension)) mime = 'video/mp4';
+      else if (['mp3', 'wav', 'm4a'].includes(extension)) mime = 'audio/mpeg';
+      else if (extension === 'pdf') mime = 'application/pdf';
+
+      console.log('Attempting share:', { path, mime, name: file.name });
+
+      const shareOptions = {
+        title: file.name || 'Share File',
+        message: `Sharing ${file.name}`,
+        url: path, // Switched back to singular 'url' for broader compatibility
+        type: mime,
+        failOnCancel: false,
+        useInternalProvider: true, // Force use of the library's internal provider
+      };
+
+      await Share.open(shareOptions);
+    } catch (error) {
+      console.log('Share Error:', error);
+      if (
+        error &&
+        error.message &&
+        error.message.includes('User did not share')
+      ) {
+        return;
+      }
+      if (error?.message) {
+        Alert.alert('Share Error', error.message);
+      }
+    }
+  };
+
   const renderIcon = mimeType => {
     const { iconName, gradientColors } = getFileIcon(mimeType);
 
@@ -723,9 +325,9 @@ const ReceivedFileScreen = () => {
       <LinearGradient
         colors={gradientColors}
         style={{
-          width: 56,
-          height: 56,
-          borderRadius: 18,
+          width: 44,
+          height: 44,
+          borderRadius: 12,
           justifyContent: 'center',
           alignItems: 'center',
           transform: [{ rotate: '5deg' }],
@@ -735,80 +337,66 @@ const ReceivedFileScreen = () => {
       >
         <View
           style={{
-            width: 52,
-            height: 52,
-            borderRadius: 16,
+            width: 44,
+            height: 44,
+            borderRadius: 12,
             backgroundColor: 'rgba(255,255,255,0.2)',
             justifyContent: 'center',
             alignItems: 'center',
           }}
         >
-          <Icon name={iconName} size={28} color="#fff" iconFamily="Ionicons" />
+          <Icon name={iconName} size={22} color="#fff" iconFamily="Ionicons" />
         </View>
       </LinearGradient>
     );
   };
 
   const renderItem = ({ item, index }) => {
-    const cardAnim = cardAnimations[index] || new Animated.Value(1);
+    const animValue = cardAnimations.current[index] || new Animated.Value(1);
 
-    const translateY = cardAnim.interpolate({
+    const translateY = animValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [50, 0],
+      outputRange: [40, 0],
     });
 
-    const opacity = cardAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0, 1],
-    });
-
-    const scale = cardAnim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [0.9, 1],
-    });
+    const opacity = animValue;
 
     return (
       <AnimatedCard
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
           marginHorizontal: 16,
           marginVertical: 8,
           padding: 16,
-          borderRadius: 24,
+          borderRadius: 22,
           backgroundColor: '#fff',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          elevation: 8,
-          transform: [{ translateY }, { scale }],
+          shadowOffset: { width: 0, height: isIOS ? 4 : 8 },
+          shadowOpacity: isIOS ? 0.08 : 0.12,
+          shadowRadius: isIOS ? 8 : 16,
+          elevation: 6,
+          transform: [{ translateY }],
           opacity,
+          overflow: isIOS ? 'visible' : 'hidden',
         }}
-        activeOpacity={0.7}
-        onPress={() => {
-          setSelectedFile(item);
-          const normalizedPath =
-            Platform.OS === 'ios' ? `file://${item?.uri}` : item?.uri;
-
-          if (Platform.OS === 'ios') {
-            ReactNativeBlobUtil.ios
-              .openDocument(normalizedPath)
-              .catch(console.error);
-          } else {
-            ReactNativeBlobUtil.android
-              .actionViewIntent(normalizedPath, getMimeType(item.mimeType))
-              .catch(console.error);
-          }
-        }}
+        activeOpacity={0.8}
+        onPress={() => openFile(item)}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-          {renderIcon(item?.mimeType)}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            flex: 1,
+            marginRight: 10,
+          }}
+        >
+          {renderIcon(item.mimeType)}
           <View style={{ marginLeft: 16, flex: 1 }}>
             <CustomeText
               fontFamily="Okra-Bold"
-              fontSize={15}
+              fontSize={14}
               color="#1E293B"
               numberOfLines={1}
             >
@@ -826,7 +414,7 @@ const ReceivedFileScreen = () => {
                   backgroundColor: '#F1F5F9',
                   paddingHorizontal: 8,
                   paddingVertical: 2,
-                  borderRadius: 8,
+                  borderRadius: 6,
                   marginRight: 8,
                 }}
               >
@@ -849,127 +437,222 @@ const ReceivedFileScreen = () => {
           </View>
         </View>
 
-        <LinearGradient
-          colors={['#3B82F6', '#2563EB']}
-          style={{
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            borderRadius: 20,
-            shadowColor: '#3B82F6',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
-          }}
-        >
-          <CustomeText fontFamily="Okra-Bold" fontSize={13} color="#fff">
-            Open
-          </CustomeText>
-        </LinearGradient>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity
+            onPress={() => shareFile(item)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: '#F1F5F9',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 8,
+            }}
+          >
+            <Icon
+              name="share-outline"
+              iconFamily="Ionicons"
+              size={18}
+              color="#475569"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => deleteFile(item)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: '#FEF2F2',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 8,
+            }}
+          >
+            <Icon
+              name="trash-outline"
+              iconFamily="Ionicons"
+              size={18}
+              color="#EF4444"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => openFile(item)}>
+            <LinearGradient
+              colors={['#3B82F6', '#2563EB']}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: '#3B82F6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+              }}
+            >
+              <Icon
+                name="eye-outline"
+                iconFamily="Ionicons"
+                size={18}
+                color="#fff"
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </AnimatedCard>
     );
   };
 
   const renderHeader = () => (
-    <Animated.View
+    <View
       style={{
         paddingHorizontal: 20,
+        paddingTop: 10,
         paddingBottom: 20,
-        transform: [{ translateY: headerSlideAnim }],
-        opacity: fadeAnim,
+        zIndex: 10,
       }}
     >
       {/* Stats Cards */}
-      <Animated.View
-        style={{
-          flexDirection: 'row',
-          gap: 12,
-          marginBottom: 20,
-          opacity: statsAnim,
-          transform: [
-            {
-              translateY: statsAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [20, 0],
-              }),
-            },
-          ],
-        }}
-      >
+      <View style={{ flexDirection: 'row', marginBottom: 20, gap: 10 }}>
         <LinearGradient
           colors={['#3B82F6', '#2563EB']}
           style={{
             flex: 1,
-            padding: 16,
             borderRadius: 20,
-            shadowColor: '#2563EB',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
+            overflow: 'hidden', // 👈 important for iOS
           }}
         >
-          <Icon
-            name="document-text"
-            iconFamily="Ionicons"
-            size={24}
-            color="#fff"
-          />
-          <CustomeText
-            fontSize={20}
-            fontFamily="Okra-Bold"
-            color="#fff"
-            style={{ marginTop: 8 }}
+          <View
+            style={{
+              flex: 1,
+              padding: 16, // 👈 move padding here
+              justifyContent: 'space-between',
+            }}
           >
-            {fileCount}
-          </CustomeText>
-          <CustomeText
-            fontSize={12}
-            color="rgba(255,255,255,0.8)"
-            fontFamily="Okra-Medium"
-          >
-            Total Files
-          </CustomeText>
+            <Icon
+              name="document-text"
+              iconFamily="Ionicons"
+              size={26}
+              color="#fff"
+            />
+
+            <View>
+              <CustomeText fontSize={22} fontFamily="Okra-Bold" color="#fff">
+                {fileCount}
+              </CustomeText>
+
+              <CustomeText
+                fontSize={12}
+                color="rgba(255,255,255,0.8)"
+                fontFamily="Okra-Medium"
+              >
+                Total Files
+              </CustomeText>
+            </View>
+          </View>
         </LinearGradient>
 
         <LinearGradient
           colors={['#8B5CF6', '#6D28D9']}
           style={{
             flex: 1,
-            padding: 16,
             borderRadius: 20,
+            overflow: 'hidden', // 🔥 important for iOS
             shadowColor: '#6D28D9',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 4,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            elevation: 5,
+            minHeight: 120, // 🔥 keeps layout stable
           }}
         >
-          <Icon
-            name="cloud-download"
-            iconFamily="Ionicons"
-            size={24}
-            color="#fff"
-          />
-          <CustomeText
-            fontSize={20}
-            fontFamily="Okra-Bold"
-            color="#fff"
-            style={{ marginTop: 8 }}
+          <View
+            style={{
+              flex: 1,
+              padding: 16, // 👈 move padding here
+              justifyContent: 'space-between',
+            }}
           >
-            {formatFileSize(totalSize)}
-          </CustomeText>
-          <CustomeText
-            fontSize={12}
-            color="rgba(255,255,255,0.8)"
-            fontFamily="Okra-Medium"
-          >
-            Total Size
-          </CustomeText>
-        </LinearGradient>
-      </Animated.View>
+            <Icon
+              name="cloud-download"
+              iconFamily="Ionicons"
+              size={26}
+              color="#fff"
+            />
 
-      {/* Recent Files Header */}
+            <View>
+              <CustomeText
+                fontSize={20}
+                fontFamily="Okra-Bold"
+                color="#fff"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {formatFileSize(totalSize)}
+              </CustomeText>
+
+              <CustomeText
+                fontSize={12}
+                color="rgba(255,255,255,0.8)"
+                fontFamily="Okra-Medium"
+              >
+                Total Size
+              </CustomeText>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Categories Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 20,
+          gap: 12,
+        }}
+      >
+        {CATEGORIES.map(cat => {
+          const isActive = selectedCategory === cat.id;
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              onPress={() => setSelectedCategory(cat.id)}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 20,
+                backgroundColor: isActive ? '#3B82F6' : 'rgba(255,255,255,0.1)',
+                borderWidth: 1,
+                borderColor: isActive ? '#3B82F6' : 'rgba(255,255,255,0.1)',
+              }}
+            >
+              <Icon
+                name={cat.icon}
+                iconFamily={cat.iconFamily}
+                size={16}
+                color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
+                style={{ marginRight: 8 }}
+              />
+              <CustomeText
+                fontFamily={isActive ? 'Okra-Bold' : 'Okra-Medium'}
+                fontSize={13}
+                color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
+              >
+                {cat.label}
+              </CustomeText>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Title */}
       <View
         style={{
           flexDirection: 'row',
@@ -977,29 +660,25 @@ const ReceivedFileScreen = () => {
           justifyContent: 'space-between',
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
             style={{
               width: 4,
               height: 24,
               backgroundColor: '#3B82F6',
               borderRadius: 2,
+              marginRight: 10,
             }}
           />
-          <CustomeText fontSize={16} fontFamily="Okra-Bold" color="#fff">
-            Recent Files
+          <CustomeText fontSize={18} fontFamily="Okra-Bold" color="#fff">
+            {CATEGORIES.find(c => c.id === selectedCategory)?.label} Files
           </CustomeText>
         </View>
-        <TouchableOpacity onPress={onRefresh}>
-          <Icon
-            name="refresh"
-            iconFamily="Ionicons"
-            size={20}
-            color="#fff"
-          />
+        <TouchableOpacity onPress={onRefresh} style={{ padding: 4 }}>
+          <Icon name="refresh" iconFamily="Ionicons" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
-    </Animated.View>
+    </View>
   );
 
   const renderEmptyState = () => (
@@ -1008,89 +687,92 @@ const ReceivedFileScreen = () => {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: height * 0.2,
+        marginTop: height * 0.15,
         opacity: fadeAnim,
       }}
     >
       <LinearGradient
-        colors={['#F1F5F9', '#E2E8F0']}
+        colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
         style={{
-          width: 120,
-          height: 120,
-          borderRadius: 60,
+          width: 140,
+          height: 140,
+          borderRadius: 70,
           justifyContent: 'center',
           alignItems: 'center',
           marginBottom: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)',
         }}
       >
         <Icon
           name="cloud-offline"
           iconFamily="Ionicons"
           size={60}
-          color="#94A3B8"
+          color="rgba(255,255,255,0.3)"
         />
       </LinearGradient>
-      <CustomeText fontFamily="Okra-Bold" fontSize={18} color="#334155">
+      <CustomeText fontFamily="Okra-Bold" fontSize={20} color="#fff">
         No Files Yet
       </CustomeText>
       <CustomeText
         fontFamily="Okra-Medium"
         fontSize={14}
-        color="#64748B"
-        style={{ marginTop: 8 }}
+        color="rgba(255,255,255,0.6)"
+        style={{ marginTop: 8, textAlign: 'center', marginHorizontal: 40 }}
       >
-        Files you receive will appear here
+        Files you receive via SHareIt will appear safely in this inbox.
       </CustomeText>
     </Animated.View>
   );
 
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-      <LinearGradient   colors={['#1a1a2e', '#16213e', '#0f3460']} style={{ flex: 1 }}>
-        <SafeAreaView style={{ flex: 1 }}>
-          {/* Animated Header */}
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
+      <LinearGradient
+        colors={['#1a1a2e', '#16213e', '#0f3460']}
+        style={{ flex: 1 }}
+      >
+        <SafeAreaView
+          style={{ flex: 1 }}
+          edges={['top', 'left', 'right', 'bottom']}
+        >
+          {/* Header */}
           <Animated.View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
               paddingHorizontal: 20,
               paddingVertical: 12,
               transform: [{ translateY: headerSlideAnim }],
               opacity: fadeAnim,
             }}
           >
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            <TouchableOpacity
+              onPress={goBack}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 16,
+              }}
             >
-              <TouchableOpacity
-                onPress={goBack}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: '#fff',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                <Icon
-                  name="arrow-back"
-                  iconFamily="Ionicons"
-                  size={22}
-                  color="#1E293B"
-                />
-              </TouchableOpacity>
-              <CustomeText fontFamily="Okra-Bold" fontSize={24} color="#fff">
-                Inbox
-              </CustomeText>
-            </View>
+              <Icon
+                name="arrow-back"
+                iconFamily="Ionicons"
+                size={24}
+                color="#fff"
+              />
+            </TouchableOpacity>
+            <CustomeText fontFamily="Okra-Bold" fontSize={26} color="#fff">
+              Inbox
+            </CustomeText>
           </Animated.View>
 
           {isLoading ? (
@@ -1102,23 +784,50 @@ const ReceivedFileScreen = () => {
               }}
             >
               <ActivityIndicator size="large" color="#3B82F6" />
-              <CustomeText color="#fff" style={{ marginTop: 12 }}>
-                Loading files...
+              <CustomeText
+                color="rgba(255,255,255,0.7)"
+                style={{ marginTop: 15 }}
+              >
+                Scanning your inbox...
               </CustomeText>
             </View>
           ) : receivedFiles.length > 0 ? (
             <FlatList
-              data={receivedFiles}
+              data={filteredFiles}
               keyExtractor={item => item.id}
               renderItem={renderItem}
-              contentContainerStyle={{ paddingBottom: 30 }}
+              contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
               ListHeaderComponent={renderHeader}
+              ListEmptyComponent={() => (
+                <View
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginTop: 40,
+                  }}
+                >
+                  <Icon
+                    name="folder-open"
+                    iconFamily="Ionicons"
+                    size={50}
+                    color="rgba(255,255,255,0.2)"
+                  />
+                  <CustomeText
+                    color="rgba(255,255,255,0.5)"
+                    style={{ marginTop: 12 }}
+                  >
+                    No {CATEGORIES.find(c => c.id === selectedCategory)?.label}{' '}
+                    found
+                  </CustomeText>
+                </View>
+              )}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
                   onRefresh={onRefresh}
-                  tintColor="#3B82F6"
+                  tintColor="#fff"
                   colors={['#3B82F6']}
                 />
               }

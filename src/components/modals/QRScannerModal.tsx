@@ -1,196 +1,7 @@
-// import {
-//   View,
-//   Text,
-//   Modal,
-//   ActivityIndicator,
-//   TouchableOpacity,
-//   Image,
-// } from 'react-native';
-// import React, { useEffect, useState, useMemo, FC } from 'react';
-// import { modalStyles } from '../../styles/modalStyles';
-// import Animated, {
-//   Easing,
-//   useSharedValue,
-//   useAnimatedStyle,
-//   withRepeat,
-//   withTiming,
-// } from 'react-native-reanimated';
-// import LinearGradient from 'react-native-linear-gradient';
-
-// import CustomeText from '../global/CustomeText';
-// import Icon from '../global/Icon';
-// import {
-//   Camera,
-//   useCameraDevice,
-//   CodeScanner,
-// } from 'react-native-vision-camera';
-// import { useTCP } from '../../service/TCPProvider';
-// import { navigate } from '../../utils/NavigationUtil';
-// import { AppState } from 'react-native';
-
-// interface ModalProps{
-//   visible:boolean;
-//   onClose:()=>void;
-// }
-// const QRScannerModal:FC<ModalProps> = ({ visible, onClose }) => {
-//   const { isConnected, connectToServer } = useTCP();
-//   const [loading, setLoading] = useState(true);
-//   const [codeFound, setCodeFOund] = useState(false);
-//   const [hasPermission, setHasPermission] = useState(false);
-//   const device = useCameraDevice('back');
-//   const shimmerTranslateX = useSharedValue(-300);
-//   const shimmerStyle = useAnimatedStyle(() => ({
-//     transform: [{ translateX: shimmerTranslateX.value }],
-//   }));
-//   useEffect(() => {
-//     shimmerTranslateX.value = withRepeat(
-//       withTiming(300, { duration: 1500, easing: Easing.linear }),
-//       -1,
-//       false,
-//     );
-//   }, [shimmerTranslateX]);
-
-//   useEffect(() => {
-//     let mounted = true;
-
-//     const checkPermission = async () => {
-//       if (AppState.currentState !== 'active') return;
-
-//       const status = await Camera.getCameraPermissionStatus();
-
-//       if (!mounted) return;
-
-//       if (status === 'granted') {
-//         setHasPermission(true);
-//       } else {
-//         const result = await Camera.requestCameraPermission();
-//         if (mounted) {
-//           setHasPermission(result === 'granted');
-//         }
-//       }
-//     };
-
-//     checkPermission();
-
-//     return () => {
-//       mounted = false;
-//     };
-//   }, []);
-
-//   useEffect(() => {
-//     if (!visible) return;
-
-//     setLoading(true);
-//     const timer = setTimeout(() => setLoading(false), 400);
-
-//     return () => clearTimeout(timer);
-//   }, [visible]);
-
-//   const handleScan = (data:any) => {
-//     const [connectionData, deviceName] = data?.replace('tcp://', '').split('|');
-
-//     const [host, port] = connectionData?.split(':');
-
-//     connectToServer(host, parseInt(port, 10), deviceName);
-//   };
-
-//   const codeScanner = useMemo(
-//     () => ({
-//       codeTypes: ['qr', 'codabar'],
-//       onCodeScanned: (codes:any) => {
-//         if (codeFound) {
-//           return;
-//         }
-
-//         if (codes?.length > 0) {
-//           const scannedData = codes[0].value;
-//           console.log(scannedData);
-//           setCodeFOund(true);
-//           handleScan(scannedData);
-//         }
-//       },
-//     }),
-//     [codeFound],
-//   );
-//   useEffect(() => {
-//     if (isConnected) {
-//       onClose();
-//       navigate('ConnectionScreen');
-//     }
-//   }, [isConnected]);
-
-//   return (
-//     <Modal
-//       animationType="slide"
-//       visible={visible}
-//       presentationStyle="formSheet"
-//       onRequestClose={onClose}
-//       onDismiss={onClose}
-//     >
-//       <View style={modalStyles.modalContainer}>
-//         <View style={modalStyles.qrContainer}>
-//           {loading ? (
-//             <View style={modalStyles.skeleton}>
-//               <Animated.View style={[modalStyles.shimmerOverlay, shimmerStyle]}>
-//                 <LinearGradient
-//                   colors={['#f3f3f3', '#fff', '#f3f3f3']}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 0 }}
-//                   style={{ flex: 1 }}
-//                 />
-//               </Animated.View>
-//             </View>
-//           ) : (
-//             <>
-//               {!device || !hasPermission ? (
-//                 <View style={modalStyles.skeleton}>
-//                   <Image
-//                     source={require('../../assets/images/no_camera.png')}
-//                     style={modalStyles.noCameraImage}
-//                   />
-//                 </View>
-//               ) : (
-//                 <View style={modalStyles.skeleton}>
-//                   <Camera
-//                     style={modalStyles.camera}
-//                     isActive={visible && hasPermission}
-//                     device={device}
-//                     codeScanner={codeScanner}
-//                   />
-//                 </View>
-//               )}
-//             </>
-//           )}
-//         </View>
-//         <View style={modalStyles.info}>
-//           <CustomeText style={modalStyles.infoText1} fontFamily="Okra-Medium">
-//             Ensure you're on the same Wi-Fi network.
-//           </CustomeText>
-
-//           <CustomeText style={modalStyles.infoText2} fontFamily="Okra-Medium">
-//             Ask the receiver to showa QR code to connect and transfer files.
-//           </CustomeText>
-//         </View>
-
-//         <ActivityIndicator
-//           size="small"
-//           color="#000"
-//           style={{ alignSelf: 'center' }}
-//         />
-
-//         <TouchableOpacity onPress={onClose} style={modalStyles.closeButton}>
-//           <Icon name="close" iconFamily="Ionicons" size={24} color="#000" />
-//         </TouchableOpacity>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// export default QRScannerModal;
-
 import {
   View,
-  Modal,
+  Animated,
+  Easing,
   ActivityIndicator,
   TouchableOpacity,
   Image,
@@ -198,17 +9,9 @@ import {
   StatusBar,
   Platform,
   StyleSheet,
+  Modal,
 } from 'react-native';
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-
-import Animated, {
-  Easing,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-} from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 
 import CustomeText from '../global/CustomeText';
@@ -224,6 +27,8 @@ import { AppState } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
+const isTablet = width > 600;
+
 interface ModalProps {
   visible: boolean;
   onClose: () => void;
@@ -236,65 +41,146 @@ const QRScannerModal: React.FC<ModalProps> = ({ visible, onClose }) => {
   const [hasPermission, setHasPermission] = useState(false);
   const device = useCameraDevice('back');
 
-  const scanLineY = useSharedValue(0);
-  const cornerScale = useSharedValue(1);
-  const cornerOpacity = useSharedValue(1);
-  const fadeAnim = useSharedValue(0);
-  const pulseAnim = useSharedValue(1);
-  const rotateAnim = useSharedValue(0);
-  const shimmerAnim = useSharedValue(-300);
+  const scanLineY = useRef(new Animated.Value(0)).current;
+  const cornerScale = useRef(new Animated.Value(1)).current;
+  const cornerOpacity = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(-300)).current;
+
+  const animsRef = useRef<Animated.CompositeAnimation[]>([]);
 
   useEffect(() => {
-    scanLineY.value = withRepeat(
-      withSequence(
-        withTiming(200, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    cornerScale.value = withRepeat(
-      withSequence(
-        withTiming(1.1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    cornerOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.7, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    pulseAnim.value = withRepeat(
-      withSequence(
-        withTiming(1.2, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    rotateAnim.value = withRepeat(
-      withTiming(360, { duration: 8000, easing: Easing.linear }),
-      -1,
-    );
-
-    shimmerAnim.value = withRepeat(
-      withTiming(300, { duration: 1500, easing: Easing.linear }),
-      -1,
-    );
-
     if (visible) {
-      fadeAnim.value = withTiming(1, { duration: 500 });
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+
+      const scanLine = Animated.loop(
+        Animated.sequence([
+          Animated.timing(scanLineY, {
+            toValue: 200,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(scanLineY, {
+            toValue: 0,
+            duration: 2000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      const cornerS = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cornerScale, {
+            toValue: 1.1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(cornerScale, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      const cornerO = Animated.loop(
+        Animated.sequence([
+          Animated.timing(cornerOpacity, {
+            toValue: 0.7,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(cornerOpacity, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+      const rotate = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 8000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+
+      const shimmer = Animated.loop(
+        Animated.timing(shimmerAnim, {
+          toValue: 300,
+          duration: 1500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      );
+
+      scanLine.start();
+      cornerS.start();
+      cornerO.start();
+      pulse.start();
+      rotate.start();
+      shimmer.start();
+
+      animsRef.current = [scanLine, cornerS, cornerO, pulse, rotate, shimmer];
     } else {
-      fadeAnim.value = withTiming(0, { duration: 300 });
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => {
+        animsRef.current.forEach(anim => anim.stop());
+        animsRef.current = [];
+      });
+    }
+
+    return () => {
+      animsRef.current.forEach(anim => anim.stop());
+    };
+  }, [visible]);
+
+  // Imperatively manage StatusBar to avoid Fabric view-recycling crash on iOS
+  useEffect(() => {
+    if (visible) {
+      StatusBar.setBarStyle('light-content', true);
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('rgba(0,0,0,0.8)', true);
+      }
+    } else {
+      StatusBar.setBarStyle('dark-content', true);
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('#1B2B4B', true);
+      }
     }
   }, [visible]);
 
@@ -336,14 +222,34 @@ const QRScannerModal: React.FC<ModalProps> = ({ visible, onClose }) => {
   }, [visible]);
 
   const handleScan = (data: any) => {
-    const [connectionData, deviceName] = data?.replace('tcp://', '').split('|');
-    const [host, port] = connectionData?.split(':');
-    connectToServer(host, parseInt(port, 10), deviceName);
+    // Only process barcodes that match our app's tcp://host:port|deviceName format
+    if (!data?.startsWith('tcp://')) {
+      // Not our QR code — reset so the scanner can try again
+      setCodeFound(false);
+      return;
+    }
+
+    const [connectionData, deviceName] = data.replace('tcp://', '').split('|');
+    if (!connectionData || !deviceName) {
+      setCodeFound(false);
+      return;
+    }
+
+    const [host, portStr] = connectionData.split(':');
+    const port = parseInt(portStr, 10);
+
+    // Guard against malformed host/port which would crash TcpSocket
+    if (!host || isNaN(port)) {
+      setCodeFound(false);
+      return;
+    }
+
+    connectToServer(host, port, deviceName);
   };
 
   const codeScanner = useMemo(
     () => ({
-      codeTypes: ['qr', 'codabar'],
+      codeTypes: ['qr'] as import('react-native-vision-camera').CodeType[],
       onCodeScanned: (codes: any) => {
         if (codeFound) return;
         if (codes?.length > 0) {
@@ -364,305 +270,323 @@ const QRScannerModal: React.FC<ModalProps> = ({ visible, onClose }) => {
     }
   }, [isConnected]);
 
-  const containerStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-  }));
-
-  const scanLineStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: scanLineY.value }],
-  }));
-
-  const cornerStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: cornerScale.value }],
-    opacity: cornerOpacity.value,
-  }));
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseAnim.value }],
-  }));
-
-  const rotateStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotateAnim.value}deg` }],
-  }));
-
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmerAnim.value }],
-  }));
-
   return (
     <Modal
-      animationType="fade"
-      transparent={true}
       visible={visible}
-      onRequestClose={onClose}
+      transparent
+      animationType="none"
       statusBarTranslucent
+      onRequestClose={onClose}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.8)" barStyle="light-content" />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+        <LinearGradient
+          colors={[
+            'rgba(0,0,0,0.95)',
+            'rgba(0,20,40,0.98)',
+            'rgba(0,40,80,0.95)',
+          ]}
+          style={[modalStyles.gradientBackground, StyleSheet.absoluteFill]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Animated.View style={[modalStyles.container, { opacity: fadeAnim }]}>
+            <View style={modalStyles.headerGradient}>
+              <View style={modalStyles.header}>
+                <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={22}>
+                  Scan QR Code
+                </CustomeText>
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={modalStyles.closeButton}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                    style={modalStyles.closeButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Icon
+                      name="close"
+                      iconFamily="Ionicons"
+                      size={22}
+                      color="#fff"
+                    />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      <LinearGradient
-        colors={[
-          'rgba(0,0,0,0.95)',
-          'rgba(0,20,40,0.98)',
-          'rgba(0,40,80,0.95)',
-        ]}
-        style={modalStyles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Animated.View style={[modalStyles.container, containerStyle]}>
-          <LinearGradient
-            colors={['rgba(255,255,255,0.1)', 'transparent']}
-            style={modalStyles.headerGradient}
-          >
-            <View style={modalStyles.header}>
-              <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={22}>
-                Scan QR Code
-              </CustomeText>
-              <TouchableOpacity
-                onPress={onClose}
-                style={modalStyles.closeButton}
-                activeOpacity={0.7}
+            <View style={modalStyles.cameraSection}>
+              <Animated.View
+                style={[
+                  modalStyles.outerRing,
+                  {
+                    transform: [
+                      {
+                        rotate: rotateAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
               >
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                  style={modalStyles.closeButtonGradient}
+                  colors={['#00E5FF', '#0072FF', '#00E5FF']}
+                  style={[
+                    modalStyles.ringGradient,
+                    { borderRadius: Dimensions.get('window').width * 0.4 },
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+              </Animated.View>
+
+              <Animated.View
+                style={[
+                  modalStyles.innerRing,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                <LinearGradient
+                  colors={['rgba(0,229,255,0.3)', 'rgba(0,114,255,0.3)']}
+                  style={[
+                    modalStyles.ringGradient,
+                    { borderRadius: Dimensions.get('window').width * 0.375 },
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+              </Animated.View>
+
+              <View style={modalStyles.cameraContainer}>
+                {loading ? (
+                  <View style={modalStyles.skeleton}>
+                    <Animated.View
+                      style={[
+                        modalStyles.shimmerOverlay,
+                        { transform: [{ translateX: shimmerAnim }] },
+                      ]}
+                    >
+                      <LinearGradient
+                        colors={[
+                          'rgba(255,255,255,0.05)',
+                          'rgba(255,255,255,0.2)',
+                          'rgba(255,255,255,0.05)',
+                        ]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ flex: 1 }}
+                      />
+                    </Animated.View>
+
+                    <Animated.View
+                      style={{ transform: [{ scale: pulseAnim }] }}
+                    >
+                      <LinearGradient
+                        colors={['#00E5FF', '#0072FF']}
+                        style={modalStyles.cameraIconGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Icon
+                          name="camera"
+                          iconFamily="Ionicons"
+                          size={40}
+                          color="#fff"
+                        />
+                      </LinearGradient>
+                    </Animated.View>
+                  </View>
+                ) : (
+                  <>
+                    {!device || !hasPermission ? (
+                      <View style={modalStyles.noCameraContainer}>
+                        <LinearGradient
+                          colors={[
+                            'rgba(255,255,255,0.1)',
+                            'rgba(255,255,255,0.05)',
+                          ]}
+                          style={modalStyles.noCameraGradient}
+                        >
+                          <Image
+                            source={require('../../assets/images/no_camera.png')}
+                            style={modalStyles.noCameraImage}
+                          />
+                          <CustomeText
+                            color="rgba(255,255,255,0.7)"
+                            fontSize={14}
+                          >
+                            Camera not available
+                          </CustomeText>
+                        </LinearGradient>
+                      </View>
+                    ) : (
+                      <View style={modalStyles.cameraWrapper}>
+                        <Camera
+                          style={modalStyles.camera}
+                          isActive={visible && hasPermission}
+                          device={device}
+                          codeScanner={codeScanner}
+                        />
+
+                        <View style={modalStyles.scanOverlay}>
+                          <LinearGradient
+                            colors={[
+                              'rgba(0,0,0,0.4)',
+                              'transparent',
+                              'rgba(0,0,0,0.4)',
+                            ]}
+                            style={modalStyles.vignette}
+                            start={{ x: 0.5, y: 0 }}
+                            end={{ x: 0.5, y: 1 }}
+                          />
+
+                          <View style={modalStyles.cornersContainer}></View>
+
+                          <Animated.View
+                            style={[
+                              modalStyles.scanLine,
+                              { transform: [{ translateY: scanLineY }] },
+                            ]}
+                          >
+                            <LinearGradient
+                              colors={[
+                                'transparent',
+                                '#00E5FF',
+                                '#0072FF',
+                                '#00E5FF',
+                                'transparent',
+                              ]}
+                              start={{ x: 0, y: 0.5 }}
+                              end={{ x: 1, y: 0.5 }}
+                              style={modalStyles.scanLineGradient}
+                            />
+                          </Animated.View>
+
+                          <Animated.View
+                            style={[
+                              modalStyles.centerDot,
+                              { transform: [{ scale: pulseAnim }] },
+                            ]}
+                          >
+                            <LinearGradient
+                              colors={['#00E5FF', '#0072FF']}
+                              style={modalStyles.centerDotGradient}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 1 }}
+                            />
+                          </Animated.View>
+
+                          <LinearGradient
+                            colors={['rgba(0,0,0,0.6)', 'rgba(0,20,40,0.8)']}
+                            style={modalStyles.scanInstruction}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                          >
+                            <CustomeText
+                              color="#fff"
+                              fontSize={12}
+                              fontFamily="Okra-Medium"
+                            >
+                              Position QR code within frame
+                            </CustomeText>
+                          </LinearGradient>
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
+
+            <LinearGradient
+              colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+              style={modalStyles.infoContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={[modalStyles.infoContainer, { padding: 10 }]}></View>
+              <View style={modalStyles.infoIcon}>
+                <LinearGradient
+                  colors={['#00E5FF', '#0072FF']}
+                  style={modalStyles.infoIconGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 >
                   <Icon
-                    name="close"
+                    name="wifi"
                     iconFamily="Ionicons"
-                    size={22}
+                    size={20}
                     color="#fff"
                   />
                 </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </LinearGradient>
-
-          <View style={modalStyles.cameraSection}>
-            <Animated.View style={[modalStyles.outerRing, rotateStyle]}>
-              <LinearGradient
-                colors={['#00E5FF', '#0072FF', '#00E5FF']}
-                style={modalStyles.ringGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-            </Animated.View>
-
-            <Animated.View style={[modalStyles.innerRing, pulseStyle]}>
-              <LinearGradient
-                colors={['rgba(0,229,255,0.3)', 'rgba(0,114,255,0.3)']}
-                style={modalStyles.ringGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-            </Animated.View>
-
-            <View style={modalStyles.cameraContainer}>
-              {loading ? (
-                <View style={modalStyles.skeleton}>
-                  <Animated.View
-                    style={[modalStyles.shimmerOverlay, shimmerStyle]}
-                  >
-                    <LinearGradient
-                      colors={[
-                        'rgba(255,255,255,0.05)',
-                        'rgba(255,255,255,0.2)',
-                        'rgba(255,255,255,0.05)',
-                      ]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={{ flex: 1 }}
-                    />
-                  </Animated.View>
-
-                  <Animated.View style={pulseStyle}>
-                    <LinearGradient
-                      colors={['#00E5FF', '#0072FF']}
-                      style={modalStyles.cameraIconGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <Icon
-                        name="camera"
-                        iconFamily="Ionicons"
-                        size={40}
-                        color="#fff"
-                      />
-                    </LinearGradient>
-                  </Animated.View>
-                </View>
-              ) : (
-                <>
-                  {!device || !hasPermission ? (
-                    <View style={modalStyles.noCameraContainer}>
-                      <LinearGradient
-                        colors={[
-                          'rgba(255,255,255,0.1)',
-                          'rgba(255,255,255,0.05)',
-                        ]}
-                        style={modalStyles.noCameraGradient}
-                      >
-                        <Image
-                          source={require('../../assets/images/no_camera.png')}
-                          style={modalStyles.noCameraImage}
-                        />
-                        <CustomeText
-                          color="rgba(255,255,255,0.7)"
-                          fontSize={14}
-                        >
-                          Camera not available
-                        </CustomeText>
-                      </LinearGradient>
-                    </View>
-                  ) : (
-                    <View style={modalStyles.cameraWrapper}>
-                      <Camera
-                        style={modalStyles.camera}
-                        isActive={visible && hasPermission}
-                        device={device}
-                        codeScanner={codeScanner}
-                      />
-
-                      <View style={modalStyles.scanOverlay}>
-                        <LinearGradient
-                          colors={[
-                            'rgba(0,0,0,0.4)',
-                            'transparent',
-                            'rgba(0,0,0,0.4)',
-                          ]}
-                          style={modalStyles.vignette}
-                          start={{ x: 0.5, y: 0 }}
-                          end={{ x: 0.5, y: 1 }}
-                        />
-
-                        <View style={modalStyles.cornersContainer}></View>
-
-                        <Animated.View
-                          style={[modalStyles.scanLine, scanLineStyle]}
-                        >
-                          <LinearGradient
-                            colors={[
-                              'transparent',
-                              '#00E5FF',
-                              '#0072FF',
-                              '#00E5FF',
-                              'transparent',
-                            ]}
-                            start={{ x: 0, y: 0.5 }}
-                            end={{ x: 1, y: 0.5 }}
-                            style={modalStyles.scanLineGradient}
-                          />
-                        </Animated.View>
-
-                        <Animated.View
-                          style={[modalStyles.centerDot, pulseStyle]}
-                        >
-                          <LinearGradient
-                            colors={['#00E5FF', '#0072FF']}
-                            style={modalStyles.centerDotGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                          />
-                        </Animated.View>
-
-                        <LinearGradient
-                          colors={['rgba(0,0,0,0.6)', 'rgba(0,20,40,0.8)']}
-                          style={modalStyles.scanInstruction}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <CustomeText
-                            color="#fff"
-                            fontSize={12}
-                            fontFamily="Okra-Medium"
-                          >
-                            Position QR code within frame
-                          </CustomeText>
-                        </LinearGradient>
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-          </View>
-
-          <LinearGradient
-            colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-            style={modalStyles.infoContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={modalStyles.infoIcon}>
-              <LinearGradient
-                colors={['#00E5FF', '#0072FF']}
-                style={modalStyles.infoIconGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Icon
-                  name="wifi"
-                  iconFamily="Ionicons"
-                  size={20}
-                  color="#fff"
-                />
-              </LinearGradient>
-            </View>
-            <View style={modalStyles.infoTextContainer}>
-              <CustomeText color="#fff" fontSize={14} fontFamily="Okra-Bold">
-                Same Wi-Fi Network Required
-              </CustomeText>
-              <CustomeText
-                color="rgba(255,255,255,0.6)"
-                fontSize={12}
-                fontFamily="Okra-Medium"
-              >
-                Make sure both devices are on the same network
-              </CustomeText>
-            </View>
-          </LinearGradient>
-
-          {codeFound ? (
-            <Animated.View style={[modalStyles.statusContainer, pulseStyle]}>
-              <LinearGradient
-                colors={['#4CAF50', '#45A049']}
-                style={modalStyles.statusBadge}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Icon
-                  name="checkmark-circle"
-                  iconFamily="Ionicons"
-                  size={20}
-                  color="#fff"
-                />
+              </View>
+              <View style={modalStyles.infoTextContainer}>
                 <CustomeText color="#fff" fontSize={14} fontFamily="Okra-Bold">
-                  Code Scanned! Connecting...
+                  Same Wi-Fi Network Required
                 </CustomeText>
-              </LinearGradient>
-            </Animated.View>
-          ) : (
-            <View style={modalStyles.loadingContainer}>
-              <CustomeText
-                color="rgba(255,255,255,0.6)"
-                fontSize={12}
-                style={modalStyles.scanningText}
+                <CustomeText
+                  color="rgba(255,255,255,0.6)"
+                  fontSize={12}
+                  fontFamily="Okra-Medium"
+                >
+                  Make sure both devices are on the same network
+                </CustomeText>
+              </View>
+            </LinearGradient>
+
+            {codeFound ? (
+              <Animated.View
+                style={[
+                  modalStyles.statusContainer,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
               >
-                Scanning for QR code...
+                <LinearGradient
+                  colors={['#4CAF50', '#45A049']}
+                  style={modalStyles.statusBadge}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Icon
+                    name="checkmark-circle"
+                    iconFamily="Ionicons"
+                    size={20}
+                    color="#fff"
+                  />
+                  <CustomeText
+                    color="#fff"
+                    fontSize={14}
+                    fontFamily="Okra-Bold"
+                  >
+                    Code Scanned! Connecting...
+                  </CustomeText>
+                </LinearGradient>
+              </Animated.View>
+            ) : (
+              <View style={modalStyles.loadingContainer}>
+                <CustomeText
+                  color="rgba(255,255,255,0.6)"
+                  fontSize={12}
+                  style={modalStyles.scanningText}
+                >
+                  Scanning for QR code...
+                </CustomeText>
+              </View>
+            )}
+
+            {/* Help Text */}
+            <View style={modalStyles.helpContainer}>
+              <CustomeText color="rgba(255,255,255,0.3)" fontSize={11}>
+                Ask the receiver to show their QR code
               </CustomeText>
             </View>
-          )}
-
-          {/* Help Text */}
-          <View style={modalStyles.helpContainer}>
-            <CustomeText color="rgba(255,255,255,0.3)" fontSize={11}>
-              Ask the receiver to show their QR code
-            </CustomeText>
-          </View>
-        </Animated.View>
-      </LinearGradient>
+          </Animated.View>
+        </LinearGradient>
+      </Animated.View>
     </Modal>
   );
 };
@@ -676,10 +600,10 @@ const modalStyles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    marginVertical: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   headerGradient: {
-    paddingTop: 20,
+    paddingTop: isTablet ? 40 : 20,
     paddingBottom: 10,
   },
   header: {
@@ -710,7 +634,6 @@ const modalStyles = StyleSheet.create({
     width: width * 0.8,
     height: width * 0.8,
     borderRadius: width * 0.4,
-    overflow: 'hidden',
     zIndex: 1,
   },
   innerRing: {
@@ -718,7 +641,6 @@ const modalStyles = StyleSheet.create({
     width: width * 0.75,
     height: width * 0.75,
     borderRadius: width * 0.375,
-    overflow: 'hidden',
     zIndex: 2,
   },
   ringGradient: {
@@ -871,7 +793,7 @@ const modalStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 50,
-    padding: 16,
+
     borderRadius: 20,
     gap: 12,
     overflow: 'hidden',

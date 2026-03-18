@@ -1,377 +1,3 @@
-// import {
-//   View,
-//   Text,
-//   StatusBar,
-//   TouchableOpacity,
-//   FlatList,
-//   ActivityIndicator,
-//   Platform,
-//   StyleSheet,
-// } from 'react-native';
-// import React, { useEffect, useState } from 'react';
-// import { useTCP } from '../service/TCPProvider';
-// import Icon from '../components/global/Icon';
-// import { goBack, resetAndNavigate } from '../utils/NavigationUtil';
-// import { sendStyles } from '../styles/sendStyles';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-// import CustomeText from '../components/global/CustomeText';
-// import { connectionStyles } from '../styles/connectionStyles';
-// import Options from '../components/home/Options';
-// import { formatFileSize } from '../utils/libraryHelpers';
-// import { Colors } from '../utils/Constants';
-// import ReactNativeBlobUtil from 'react-native-blob-util';
-// import LinearGradient from 'react-native-linear-gradient';
-
-
-// const ConnectionScreen = () => {
-//   const {
-//     connectedDevice,
-//     disconnect,
-//     sendFileAck,
-//     sentFiles,
-//     receivedFiles,
-//     totalReceivedBytes,
-//     totalSentBytes,
-//     isConnected,
-//   } = useTCP();
-//   const TABS = {
-//     SENT: 'SENT',
-//     RECEIVED: 'RECEIVED',
-//   };
-
-//   const [activeTab, setActiveTab] = useState(TABS.SENT);
-
-//   const renderThumbnail = mimeType => {
-//     switch (mimeType) {
-//       case '.mp3':
-//         return (
-//           <Icon
-//             name="musical-notes"
-//             size={16}
-//             color="blue"
-//             iconFamily="Ionicons"
-//           />
-//         );
-
-//       case '.mp4':
-//         return (
-//           <Icon name="videocam" size={16} color="green" iconFamily="Ionicons" />
-//         );
-
-//       case '.jpg':
-//         return (
-//           <Icon name="image" size={16} color="orange" iconFamily="Ionicons" />
-//         );
-
-//       case '.pdf':
-//         return (
-//           <Icon name="document" size={16} color="red" iconFamily="Ionicons" />
-//         );
-
-//       default:
-//         return (
-//           <Icon name="folder" size={16} color="gray" iconFamily="Ionicons" />
-//         );
-//     }
-//   };
-//   const onMediaPickedUp = image => {
-//     console.log('Picked image:', image);
-//     sendFileAck(image, 'image');
-//   };
-
-//   const onFilePickedUp = file => {
-//     console.log('Picked file:', file);
-//     sendFileAck(file, 'file');
-//   };
-
-//   useEffect(() => {
-//     if (!isConnected) {
-//       resetAndNavigate('HomeScreen');
-//     }
-//   }, [isConnected]);
-//   const handleTabChange = tab => {
-//     setActiveTab(tab);
-//   };
-//   const handleGoBack = () => {
-//     resetAndNavigate('HomeScreen');
-//   };
-
-//   const getMimeType = ext => {
-//     const e = ext?.replace('.', '').toLowerCase();
-
-//     switch (e) {
-//       case 'jpg':
-//       case 'jpeg':
-//         return 'image/jpeg';
-//       case 'png':
-//         return 'image/png';
-//       case 'mp4':
-//         return 'video/mp4';
-//       case 'mp3':
-//         return 'audio/mpeg';
-//       case 'pdf':
-//         return 'application/pdf';
-//       default:
-//         return '*/*';
-//     }
-//   };
-
-//   const renderItem = ({ item }) => {
-   
-
-//     return (
-//       <View style={connectionStyles.fileItem}>
-//         <View style={connectionStyles.fileInfoContainer}>
-//           {renderThumbnail(item?.mimeType)}
-
-//           <View style={connectionStyles?.fileDetails}>
-//             <CustomeText numberOfLines={1} fontFamily="Okra-Bold" fontSize={10}>
-//               {item?.name}
-//             </CustomeText>
-
-//             <CustomeText>
-//               {item?.mimeType} • {formatFileSize(item.size)}
-//             </CustomeText>
-//           </View>
-//         </View>
-
-//         {item?.available ? (
-//           <TouchableOpacity
-//             style={connectionStyles.openButton}
-//             onPress={() => {
-//               const normalizedPath =
-//                 Platform.OS === 'ios' ? `file://${item?.uri}` : item?.uri;
-
-//               if (Platform.OS === 'ios') {
-//                 ReactNativeBlobUtil.ios
-//                   .openDocument(normalizedPath)
-//                   .then(() => console.log('File opened successfully'))
-//                   .catch(err => console.error('Error opening file:', err));
-//               } else {
-//                 ReactNativeBlobUtil.android
-//                   .actionViewIntent(normalizedPath, getMimeType(item.mimeType))
-//                   .then(() => console.log('File opened successfully'))
-//                   .catch(err => console.error('Error opening file:', err));
-//               }
-//             }}
-//           >
-//             <CustomeText
-//               numberOfLines={1}
-//               fontFamily="Okra-Bold"
-//               fontSize={10}
-//               color="#fff"
-//             >
-//               Open
-//             </CustomeText>
-            
-//           </TouchableOpacity>
-//         ) : (
-      
-       
-//             <ActivityIndicator colors={'blue'} size={'small'}/>
-  
-//         )}
-//       </View>
-//     );
-//   };
-//   return (
-//     <>
-//       <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-//       <LinearGradient
-//         colors={['#FFFFFF', '#CDDAEE', '#8DBAFF']}
-//         style={sendStyles.container}
-//         start={{ x: 0, y: 1 }}
-//         end={{ x: 0, y: 0 }}
-//       >
-//         <SafeAreaView style={{ flex: 1 }}>
-//           <View style={sendStyles.mainContainer}>
-//             <View style={connectionStyles.container}>
-//               <View style={connectionStyles.connectionContainer}>
-//                 <View style={{ width: '55%' }}>
-//                   <CustomeText numberOfLines={1} fontFamily="Okra-Medium">
-//                     Connected with
-//                   </CustomeText>
-
-//                   <CustomeText
-//                     numberOfLines={1}
-//                     fontFamily="Okra-Bold"
-//                     fontSize={14}
-//                   >
-//                     {connectedDevice || 'Unknown'}
-//                   </CustomeText>
-//                 </View>
-//                 <TouchableOpacity
-//                   onPress={() => disconnect()}
-//                   style={connectionStyles.disconnectButton}
-//                 >
-//                   <Icon
-//                     name="remove-circle"
-//                     size={12}
-//                     color="red"
-//                     iconFamily="Ionicons"
-//                   />
-
-//                   <CustomeText
-//                     numberOfLines={1}
-//                     fontFamily="Okra-Bold"
-//                     fontSize={10}
-//                   >
-//                     Disconnect
-//                   </CustomeText>
-//                 </TouchableOpacity>
-//               </View>
-//               <Options
-//                 onMediaPickedUp={onMediaPickedUp}
-//                 onFilePickedUp={onFilePickedUp}
-//               />
-//               <View style={connectionStyles.fileContainer}>
-//                 <View style={connectionStyles.sendReceiveContainer}>
-//                   <View style={connectionStyles.sendReceiveButtonContainer}>
-//                     <TouchableOpacity
-//                       onPress={() => handleTabChange('SENT')}
-//                       style={[
-//                         connectionStyles.sendReceiveButton,
-//                         activeTab === 'SENT'
-//                           ? connectionStyles.activeButton
-//                           : connectionStyles.inactiveButton,
-//                       ]}
-//                     >
-//                       <Icon
-//                         name="cloud-upload"
-//                         size={12}
-//                         color={activeTab === 'SENT' ? '#fff' : 'blue'}
-//                         iconFamily="Ionicons"
-//                       />
-
-//                       <CustomeText
-//                         numberOfLines={1}
-//                         fontFamily="Okra-Bold"
-//                         fontSize={9}
-//                         color={activeTab === 'SENT' ? '#fff' : '#000'}
-//                       >
-//                         SENT
-//                       </CustomeText>
-//                     </TouchableOpacity>
-//                     <TouchableOpacity
-//                       onPress={() => handleTabChange('RECEIVED')}
-//                       style={[
-//                         connectionStyles.sendReceiveButton,
-//                         activeTab === 'RECEIVED'
-//                           ? connectionStyles.activeButton
-//                           : connectionStyles.inactiveButton,
-//                       ]}
-//                     >
-//                       <Icon
-//                         name="cloud-upload"
-//                         size={12}
-//                         color={activeTab === 'RECEIVED' ? '#fff' : 'blue'}
-//                         iconFamily="Ionicons"
-//                       />
-
-//                       <CustomeText
-//                         numberOfLines={1}
-//                         fontFamily="Okra-Bold"
-//                         fontSize={9}
-//                         color={activeTab === 'RECEIVED' ? '#fff' : 'blue'}
-//                       >
-//                         RECEIVED
-//                       </CustomeText>
-//                     </TouchableOpacity>
-//                   </View>
-//                   <View style={connectionStyles.sendReceiveDataContainer}>
-//                     <CustomeText
-//                       numberOfLines={1}
-//                       fontFamily="Okra-Medium"
-//                       fontSize={10}
-//                     >
-//                       {formatFileSize(
-//                         (activeTab === 'SENT'
-//                           ? totalSentBytes
-//                           : totalReceivedBytes) || 0,
-//                       )}
-//                     </CustomeText>
-//                     <CustomeText
-//                       numberOfLines={1}
-//                       fontFamily="Okra-Medium"
-//                       fontSize={10}
-//                     >
-//                       /
-//                     </CustomeText>
-
-//                     <CustomeText
-//                       numberOfLines={1}
-//                       fontFamily="Okra-Medium"
-//                       fontSize={10}
-//                     >
-//                       {activeTab === 'SENT'
-//                         ? formatFileSize(
-//                             sentFiles?.reduce(
-//                               (total, file) => total + file.size,
-//                               0,
-//                             ),
-//                           )
-//                         : formatFileSize(
-//                             receivedFiles?.reduce(
-//                               (total, file) => total + file.size,
-//                               0,
-//                             ),
-//                           )}
-//                     </CustomeText>
-//                   </View>
-//                 </View>
-
-//                 {(activeTab === 'SENT'
-//                   ? sentFiles?.length
-//                   : receivedFiles?.length) > 0 ? (
-//                   <FlatList
-//                     data={activeTab === 'SENT' ? sentFiles : receivedFiles}
-//                     keyExtractor={item => item.id.toString()}
-//                     renderItem={renderItem}
-//                     contentContainerStyle={connectionStyles.fileList}
-//                   />
-//                 ) : (
-//                   <View style={connectionStyles.noDataContainer}>
-//                     <CustomeText
-//                       numberOfLines={1}
-//                       fontFamily="Okra-Medium"
-//                       fontSize={11}
-//                     >
-//                       {activeTab === 'SENT'
-//                         ? 'No files sent yet.'
-//                         : 'No files received yet.'}
-//                     </CustomeText>
-//                   </View>
-//                 )}
-//               </View>
-//             </View>
-
-//             <TouchableOpacity
-//               onPress={handleGoBack}
-//               style={sendStyles.backButton}
-//             >
-//               <Icon
-//                 name="arrow-back"
-//                 iconFamily="Ionicons"
-//                 size={16}
-//                 color="#000"
-//               />
-//             </TouchableOpacity>
-//           </View>
-//         </SafeAreaView>
-//       </LinearGradient>
-//     </>
-//   );
-// };
-// const styles = StyleSheet.create({
-//   progressBar: {
-//     marginTop: 6,
-//     height: 6,
-//     borderRadius: 5,
-//   },
-// });
-// export default ConnectionScreen;
-
-
 import {
   View,
   StatusBar,
@@ -397,8 +23,7 @@ import LinearGradient from 'react-native-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-// ✅ FIXED: Separate component for file items with proper Hook usage
-const FileItem = ({ item, index }) => {
+const FileItem = ({ item, index, isSent }) => {
   const itemAnim = useRef(new Animated.Value(0)).current;
   const itemDelay = index * 100;
 
@@ -421,179 +46,259 @@ const FileItem = ({ item, index }) => {
     outputRange: [0, 1],
   });
 
-  const getFileIcon = (mimeType) => {
-    const ext = mimeType?.replace('.', '').toLowerCase();
+  const getFileIcon = mimeType => {
+    const ext = mimeType?.includes('/')
+      ? mimeType.split('/').pop().toLowerCase()
+      : mimeType?.replace('.', '').toLowerCase();
+
     let iconName = 'document';
     let gradientColors = ['#94A3B8', '#64748B'];
-    
+
     switch (ext) {
       case 'mp3':
       case 'wav':
       case 'm4a':
+      case 'audio':
+      case 'mpeg':
         iconName = 'musical-notes';
         gradientColors = ['#F472B6', '#DB2777'];
         break;
+
       case 'mp4':
       case 'mov':
+      case 'video':
       case 'avi':
         iconName = 'videocam';
         gradientColors = ['#FCD34D', '#F59E0B'];
         break;
+
       case 'jpg':
       case 'jpeg':
       case 'png':
+      case 'image':
       case 'gif':
         iconName = 'image';
         gradientColors = ['#6EE7B7', '#10B981'];
         break;
+
       case 'pdf':
+      case 'file':
         iconName = 'document-text';
         gradientColors = ['#F87171', '#DC2626'];
         break;
-      case 'doc':
-      case 'docx':
-        iconName = 'document';
-        gradientColors = ['#60A5FA', '#2563EB'];
-        break;
     }
-    
+
     return { iconName, gradientColors };
   };
 
-  const renderThumbnail = (mimeType) => {
+  const renderThumbnail = mimeType => {
     const { iconName, gradientColors } = getFileIcon(mimeType);
-    
+
     return (
       <LinearGradient
         colors={gradientColors}
         style={{
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           borderRadius: 16,
           justifyContent: 'center',
           alignItems: 'center',
           transform: [{ rotate: '3deg' }],
         }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <LinearGradient
-          colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
+        <View
           style={{
             width: 44,
             height: 44,
             borderRadius: 14,
             justifyContent: 'center',
             alignItems: 'center',
+            backgroundColor: 'rgba(255,255,255,0.2)',
           }}
         >
-          <Icon name={iconName} size={24} color="#fff" iconFamily="Ionicons" />
-        </LinearGradient>
+          <Icon name={iconName} size={20} color="#fff" iconFamily="Ionicons" />
+        </View>
       </LinearGradient>
     );
   };
 
-  const getMimeType = ext => {
-    const e = ext?.replace('.', '').toLowerCase();
-    switch (e) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'mp4':
-        return 'video/mp4';
-      case 'mp3':
-        return 'audio/mpeg';
-      case 'pdf':
-        return 'application/pdf';
-      default:
-        return '*/*';
-    }
-  };
+  const getMimeType = mimeType => {
+    if (!mimeType) return '*/*';
 
+    if (mimeType.includes('/')) {
+      return mimeType;
+    }
+
+    const ext = mimeType.replace('.', '').toLowerCase();
+
+    const types = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+
+      mp4: 'video/mp4',
+      mov: 'video/quicktime',
+      avi: 'video/x-msvideo',
+      mkv: 'video/x-matroska',
+
+      mp3: 'audio/mpeg',
+      wav: 'audio/wav',
+      m4a: 'audio/mp4',
+      aac: 'audio/aac',
+
+      pdf: 'application/pdf',
+      doc: 'application/msword',
+      docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      txt: 'text/plain',
+      csv: 'text/csv',
+      rtf: 'application/rtf',
+      zip: 'application/zip',
+      rar: 'application/x-rar-compressed',
+      apk: 'application/vnd.android.package-archive',
+    };
+
+    console.log('Determining types:', ext, types[ext]);
+    return types[ext] || '*/*';
+  };
   return (
     <Animated.View
       style={{
         transform: [{ translateX }],
         opacity,
+        marginHorizontal: 16,
+        marginVertical: 6,
       }}
     >
-      <LinearGradient
-        colors={['#FFFFFF', '#F8FAFC']}
-        style={styles.fileItem}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
+        style={{
+          width: '100%',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 15,
+          borderRadius: 20,
+          backgroundColor: '#fff',
+        }}
       >
         <View style={styles.fileInfoContainer}>
           {renderThumbnail(item?.mimeType)}
           <View style={styles.fileDetails}>
-            <CustomeText numberOfLines={1} fontFamily="Okra-Bold" fontSize={14} color="#1E293B">
+            <CustomeText
+              numberOfLines={1}
+              fontFamily="Okra-Bold"
+              fontSize={14}
+              color="#1E293B"
+            >
               {item?.name}
             </CustomeText>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <LinearGradient
-                colors={['#F1F5F9', '#E2E8F0']}
-                style={styles.fileTypeBadge}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 4,
+                flexWrap: 'wrap',
+              }}
+            >
+              <CustomeText
+                fontSize={10}
+                color="#475569"
+                fontFamily="Okra-Medium"
               >
-                <CustomeText fontSize={10} color="#475569" fontFamily="Okra-Medium">
-                  {item?.mimeType?.toUpperCase()}
-                </CustomeText>
-              </LinearGradient>
-              <CustomeText fontSize={11} color="#64748B" fontFamily="Okra-Medium" style={{ marginLeft: 8 }}>
+                {item?.mimeType?.toUpperCase()}
+              </CustomeText>
+              {/* </LinearGradient> */}
+              <CustomeText
+                fontSize={11}
+                color="#64748B"
+                fontFamily="Okra-Medium"
+                style={{ marginLeft: 8 }}
+              >
                 {formatFileSize(item.size)}
               </CustomeText>
             </View>
           </View>
         </View>
 
-        {item?.available ? (
-          <TouchableOpacity
-            style={styles.openButton}
-            onPress={() => {
-              const normalizedPath =
-                Platform.OS === 'ios' ? `file://${item?.uri}` : item?.uri;
-
-              if (Platform.OS === 'ios') {
-                ReactNativeBlobUtil.ios
-                  .openDocument(normalizedPath)
-                  .catch(err => console.error('Error opening file:', err));
-              } else {
-                ReactNativeBlobUtil.android
-                  .actionViewIntent(normalizedPath, getMimeType(item.mimeType))
-                  .catch(err => console.error('Error opening file:', err));
-              }
-            }}
-          >
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
-              style={styles.openButtonGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <CustomeText fontFamily="Okra-Bold" fontSize={12} color="#fff">
-                Open
+        {
+          !item?.available ? (
+            // Still transferring — show loader for both sent and received
+            <View style={[styles.loadingContainer]}>
+              <ActivityIndicator color="#3B82F6" size="small" />
+              <CustomeText
+                fontSize={10}
+                color="#475569"
+                style={{ marginLeft: 4 }}
+              >
+                {isSent ? 'Transferring...' : 'Receiving...'}
               </CustomeText>
-            </LinearGradient>
-          </TouchableOpacity>
-        ) : (
-          <LinearGradient
-            colors={['#F1F5F9', '#E2E8F0']}
-            style={styles.loadingContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <ActivityIndicator color="#3B82F6" size="small" />
-            <CustomeText fontSize={10} color="#475569" style={{ marginLeft: 4 }}>
-              Sending...
-            </CustomeText>
-          </LinearGradient>
-        )}
-      </LinearGradient>
+            </View>
+          ) : !isSent ? (
+            // Received and done — show Open button
+            <TouchableOpacity
+              style={styles.openButton}
+              onPress={() => {
+                const uri = item?.uri || '';
+
+                if (Platform.OS === 'ios') {
+                  // Ensure exactly one file:// prefix
+                  const iosPath = uri.startsWith('file://')
+                    ? uri
+                    : `file://${uri}`;
+                  ReactNativeBlobUtil.ios
+                    .openDocument(iosPath)
+                    .catch(err => console.error('Error opening file:', err));
+                } else {
+                  // Android: content:// URIs work directly with actionViewIntent.
+                  // file:// URIs must be passed as-is (no double prefix).
+                  // Strip any accidental double prefix like file://file:/ or /file:/
+                  let androidUri = uri;
+                  if (androidUri.startsWith('file://file://')) {
+                    androidUri = androidUri.replace(
+                      'file://file://',
+                      'file://',
+                    );
+                  } else if (androidUri.startsWith('/file:/')) {
+                    androidUri = 'file://' + androidUri.replace('/file:/', '');
+                  }
+                  ReactNativeBlobUtil.android
+                    .actionViewIntent(androidUri, getMimeType(item.mimeType))
+                    .catch(err => console.error('Error opening file:', err));
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.openButtonGradient,
+                  {
+                    shadowColor: '#3B82F6',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 4,
+                    elevation: 4,
+                    backgroundColor: '#3B82F6',
+                  },
+                ]}
+              >
+                <CustomeText fontFamily="Okra-Bold" fontSize={12} color="#fff">
+                  Open
+                </CustomeText>
+              </View>
+            </TouchableOpacity>
+          ) : null /* Sent and done — show nothing */
+        }
+      </View>
     </Animated.View>
   );
 };
-
 const ConnectionScreen = () => {
   const {
     connectedDevice,
@@ -612,13 +317,23 @@ const ConnectionScreen = () => {
   };
 
   const [activeTab, setActiveTab] = useState(TABS.SENT);
-  
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const headerScale = useRef(new Animated.Value(0.95)).current;
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (receivedFiles?.length === 1) {
+      setActiveTab(TABS.RECEIVED);
+    }
+  }, [receivedFiles]);
 
+  useEffect(() => {
+    if (sentFiles?.length === 1) {
+      setActiveTab(TABS.SENT);
+    }
+  }, [sentFiles]);
   useEffect(() => {
     // Entrance animations
     Animated.parallel([
@@ -662,7 +377,7 @@ const ConnectionScreen = () => {
   };
 
   const handleGoBack = () => {
-    resetAndNavigate('HomeScreen');
+    goBack();
   };
 
   const onMediaPickedUp = image => {
@@ -676,13 +391,18 @@ const ConnectionScreen = () => {
   };
 
   // Simplified renderItem now just returns the FileItem component
-  const renderItem = ({ item, index }) => (
-    <FileItem item={item} index={index} />
-  );
+  const renderItem = ({ item, index }) =>
+    console.log('Rendering file item:', item) || (
+      <FileItem item={item} index={index} isSent={activeTab === TABS.SENT} />
+    );
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
       <LinearGradient
         colors={['#1a1a2e', '#16213e', '#0f3460']}
         style={styles.container}
@@ -710,7 +430,7 @@ const ConnectionScreen = () => {
         </View>
 
         <SafeAreaView style={{ flex: 1 }}>
-          <Animated.View 
+          <Animated.View
             style={[
               styles.mainContainer,
               {
@@ -727,25 +447,53 @@ const ConnectionScreen = () => {
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.header}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
                   <TouchableOpacity
                     onPress={handleGoBack}
                     style={styles.backButton}
                   >
                     <LinearGradient
-                      colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                      colors={[
+                        'rgba(255,255,255,0.2)',
+                        'rgba(255,255,255,0.1)',
+                      ]}
                       style={styles.backButtonGradient}
                     >
-                      <Icon name="arrow-back" iconFamily="Ionicons" size={22} color="#fff" />
+                      <Icon
+                        name="arrow-back"
+                        iconFamily="Ionicons"
+                        size={22}
+                        color="#fff"
+                      />
                     </LinearGradient>
                   </TouchableOpacity>
                   <View>
-                    <CustomeText fontSize={12} color="rgba(255,255,255,0.6)" fontFamily="Okra-Medium">
+                    <CustomeText
+                      fontSize={12}
+                      color="rgba(255,255,255,0.6)"
+                      fontFamily="Okra-Medium"
+                    >
                       Active Connection
                     </CustomeText>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
                       <View style={styles.activeDot} />
-                      <CustomeText fontSize={16} fontFamily="Okra-Bold" color="#fff">
+                      <CustomeText
+                        fontSize={16}
+                        fontFamily="Okra-Bold"
+                        color="#fff"
+                      >
                         {connectedDevice || 'Unknown Device'}
                       </CustomeText>
                     </View>
@@ -759,7 +507,12 @@ const ConnectionScreen = () => {
                     colors={['#EF4444', '#DC2626']}
                     style={styles.disconnectButtonGradient}
                   >
-                    <Icon name="close-circle" size={20} color="#fff" iconFamily="Ionicons" />
+                    <Icon
+                      name="close-circle"
+                      size={20}
+                      color="#fff"
+                      iconFamily="Ionicons"
+                    />
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -775,91 +528,136 @@ const ConnectionScreen = () => {
 
             {/* Files Section */}
             <View style={styles.filesSection}>
-              {/* Tab Bar with Gradient */}
-              <LinearGradient
-                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                style={styles.tabBar}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
+              <View style={styles.tabBar}>
                 <View style={styles.tabContainer}>
                   <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={() => handleTabChange(TABS.SENT)}
-                    style={[styles.tab, activeTab === TABS.SENT && styles.activeTab]}
+                    style={styles.tab}
                   >
-                    <LinearGradient
-                      colors={activeTab === TABS.SENT ? ['#3B82F6', '#2563EB'] : ['transparent', 'transparent']}
-                      style={[StyleSheet.absoluteFill, { borderRadius: 18 }]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                    <Icon
-                      name="arrow-up-circle"
-                      size={18}
-                      color={activeTab === TABS.SENT ? '#fff' : 'rgba(255,255,255,0.5)'}
-                      iconFamily="Ionicons"
-                    />
-                    <CustomeText
-                      fontSize={13}
-                      fontFamily="Okra-Bold"
-                      color={activeTab === TABS.SENT ? '#fff' : 'rgba(255,255,255,0.5)'}
-                      style={{ marginLeft: 6 }}
-                    >
-                      Sent
-                    </CustomeText>
+                    {activeTab === TABS.SENT && (
+                      <LinearGradient
+                        colors={['#3B82F6', '#2563EB']}
+                        style={[StyleSheet.absoluteFill, { borderRadius: 18 }]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      />
+                    )}
+                    <View style={styles.tabContent}>
+                      <Icon
+                        name="arrow-up-circle"
+                        size={18}
+                        color={
+                          activeTab === TABS.SENT
+                            ? '#fff'
+                            : 'rgba(255,255,255,0.5)'
+                        }
+                        iconFamily="Ionicons"
+                      />
+                      <CustomeText
+                        fontSize={13}
+                        fontFamily="Okra-Bold"
+                        color={
+                          activeTab === TABS.SENT
+                            ? '#fff'
+                            : 'rgba(255,255,255,0.5)'
+                        }
+                        style={{ marginLeft: 6 }}
+                      >
+                        Sent
+                      </CustomeText>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    activeOpacity={0.8}
                     onPress={() => handleTabChange(TABS.RECEIVED)}
-                    style={[styles.tab, activeTab === TABS.RECEIVED && styles.activeTab]}
+                    style={styles.tab}
                   >
-                    <LinearGradient
-                      colors={activeTab === TABS.RECEIVED ? ['#3B82F6', '#2563EB'] : ['transparent', 'transparent']}
-                      style={[StyleSheet.absoluteFill, { borderRadius: 18 }]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    />
-                    <Icon
-                      name="arrow-down-circle"
-                      size={18}
-                      color={activeTab === TABS.RECEIVED ? '#fff' : 'rgba(255,255,255,0.5)'}
-                      iconFamily="Ionicons"
-                    />
-                    <CustomeText
-                      fontSize={13}
-                      fontFamily="Okra-Bold"
-                      color={activeTab === TABS.RECEIVED ? '#fff' : 'rgba(255,255,255,0.5)'}
-                      style={{ marginLeft: 6 }}
-                    >
-                      Received
-                    </CustomeText>
+                    {activeTab === TABS.RECEIVED && (
+                      <LinearGradient
+                        colors={['#3B82F6', '#2563EB']}
+                        style={[StyleSheet.absoluteFill, { borderRadius: 18 }]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      />
+                    )}
+                    <View style={styles.tabContent}>
+                      <Icon
+                        name="arrow-down-circle"
+                        size={18}
+                        color={
+                          activeTab === TABS.RECEIVED
+                            ? '#fff'
+                            : 'rgba(255,255,255,0.5)'
+                        }
+                        iconFamily="Ionicons"
+                      />
+                      <CustomeText
+                        fontSize={13}
+                        fontFamily="Okra-Bold"
+                        color={
+                          activeTab === TABS.RECEIVED
+                            ? '#fff'
+                            : 'rgba(255,255,255,0.5)'
+                        }
+                        style={{ marginLeft: 6 }}
+                      >
+                        Received
+                      </CustomeText>
+                    </View>
                   </TouchableOpacity>
                 </View>
 
                 {/* Transfer Stats */}
                 <View style={styles.statsContainer}>
                   <View style={styles.statItem}>
-                    <CustomeText fontSize={20} fontFamily="Okra-Bold" color="#fff">
-                      {activeTab === TABS.SENT ? sentFiles?.length : receivedFiles?.length}
+                    <CustomeText
+                      fontSize={20}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
+                      {activeTab === TABS.SENT
+                        ? sentFiles?.length
+                        : receivedFiles?.length}
                     </CustomeText>
-                    <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">Files</CustomeText>
+                    <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">
+                      Files
+                    </CustomeText>
                   </View>
                   <View style={styles.statDivider} />
                   <View style={styles.statItem}>
-                    <CustomeText fontSize={20} fontFamily="Okra-Bold" color="#fff">
+                    <CustomeText
+                      fontSize={20}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
                       {formatFileSize(
                         activeTab === TABS.SENT
                           ? totalSentBytes
-                          : totalReceivedBytes || 0
+                          : totalReceivedBytes || 0,
                       )}
                     </CustomeText>
-                    <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">Transferred</CustomeText>
+                    <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">
+                      {activeTab === TABS.SENT ? 'Sent' : 'Received'}
+                    </CustomeText>
                   </View>
                 </View>
-              </LinearGradient>
+              </View>
+              {/* Tab Bar with Gradient */}
+              {/* <LinearGradient
+                colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
+                style={styles.tabBar}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              > */}
+
+              {/* </LinearGradient> */}
 
               {/* Files List */}
-              {(activeTab === TABS.SENT ? sentFiles?.length : receivedFiles?.length) > 0 ? (
+              {(activeTab === TABS.SENT
+                ? sentFiles?.length
+                : receivedFiles?.length) > 0 ? (
                 <FlatList
                   data={activeTab === TABS.SENT ? sentFiles : receivedFiles}
                   keyExtractor={item => item.id.toString()}
@@ -874,16 +672,29 @@ const ConnectionScreen = () => {
                     style={styles.emptyIcon}
                   >
                     <Icon
-                      name={activeTab === TABS.SENT ? 'arrow-up-circle' : 'arrow-down-circle'}
+                      name={
+                        activeTab === TABS.SENT
+                          ? 'arrow-up-circle'
+                          : 'arrow-down-circle'
+                      }
                       size={50}
                       color="rgba(255,255,255,0.3)"
                       iconFamily="Ionicons"
                     />
                   </LinearGradient>
-                  <CustomeText fontSize={18} fontFamily="Okra-Bold" color="rgba(255,255,255,0.7)" style={{ marginTop: 16 }}>
+                  <CustomeText
+                    fontSize={18}
+                    fontFamily="Okra-Bold"
+                    color="rgba(255,255,255,0.7)"
+                    style={{ marginTop: 16 }}
+                  >
                     No {activeTab === TABS.SENT ? 'sent' : 'received'} files yet
                   </CustomeText>
-                  <CustomeText fontSize={14} color="rgba(255,255,255,0.4)" style={{ marginTop: 8 }}>
+                  <CustomeText
+                    fontSize={14}
+                    color="rgba(255,255,255,0.4)"
+                    style={{ marginTop: 8 }}
+                  >
                     Files will appear here during transfer
                   </CustomeText>
                 </View>
@@ -974,15 +785,16 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
+    height: 44,
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  tabContent: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 18,
-    position: 'relative',
-  },
-  activeTab: {
-    // Active state handled by gradient overlay
   },
   statsContainer: {
     flexDirection: 'row',
@@ -1002,18 +814,12 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   fileItem: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 4,
-    marginVertical: 6,
     padding: 12,
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
   fileInfoContainer: {
     flexDirection: 'row',
@@ -1031,13 +837,14 @@ const styles = StyleSheet.create({
   },
   openButton: {
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: Platform.OS === 'ios' ? 'visible' : 'hidden',
   },
   openButtonGradient: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 16,
   },
   loadingContainer: {
     flexDirection: 'row',

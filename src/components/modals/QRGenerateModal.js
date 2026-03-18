@@ -1,158 +1,18 @@
-// import {
-//   View,
-//   Text,
-//   Modal,
-//   ActivityIndicator,
-//   TouchableOpacity,
-// } from 'react-native';
-// import React, { useEffect, useState } from 'react';
-// import { modalStyles } from '../../styles/modalStyles';
-// import Animated, {
-//   Easing,
-//   useSharedValue,
-//   useAnimatedStyle,
-//   withRepeat,
-//   withTiming,
-// } from 'react-native-reanimated';
-// import LinearGradient from 'react-native-linear-gradient';
-// import { multiColor } from '../../utils/Constants';
-// import QRCode from 'react-native-qrcode-svg';
-// import CustomeText from '../global/CustomeText';
-// import Icon from '../global/Icon';
-// // import { useTCP } from '../../service/TCPProvider';
-// import DeviceInfo from 'react-native-device-info';
-// import { getLocalIPAddress } from '../../utils/networkUtils';
-// import { navigate } from '../../utils/NavigationUtil';
-// import { useTCP } from '../../service/TCPProvider';
-// const QRGenerateModal = ({ visible, onClose }) => {
-//   const { startServer, server, isConnected } = useTCP();
-//   const [loading, setLoading] = useState(true);
-//   const [qrValue, setQRValue] = useState('Rakesh');
-//   const shimmerTranslateX = useSharedValue(-300);
-//   const shimmerStyle = useAnimatedStyle(() => ({
-//     transform: [{ translateX: shimmerTranslateX.value }],
-//   }));
-//   const setupServer = async () => {
-//     const deviceName = await DeviceInfo.getDeviceName();
-//     const ip = await getLocalIPAddress();
-//     const port = 4000;
-
-//     if (server) {
-//       setQRValue(`tcp://${ip}:${port}|${deviceName}`);
-//       setLoading(false);
-//       return;
-//     }
-
-//     startServer(port);
-//     setQRValue(`tcp://${ip}:${port}|${deviceName}`);
-//     console.log(`Server Info: ${ip}:${port}`);
-//     setLoading(false);
-//   };
-
-//   useEffect(() => {
-//     console.log('TCPProvider: isConnected updated to', isConnected);
-
-//     if (isConnected) {
-//       onClose();
-//       navigate('ConnectionScreen');
-//     }
-//   }, [isConnected]);
-
-//   useEffect(() => {
-//     shimmerTranslateX.value = withRepeat(
-//       withTiming(300, { duration: 1500, easing: Easing.linear }),
-//       -1,
-//       false,
-//     );
-//     if (visible) {
-//       setupServer();
-//       setLoading(true);
-//     }
-//   }, [visible]);
-//   return (
-//     <Modal
-//       animationType="slide"
-//       visible={visible}
-//       presentationStyle="formSheet"
-//       onRequestClose={onClose}
-//       onDismiss={onClose}
-//     >
-//       <View style={modalStyles.modalContainer}>
-//         <View style={modalStyles.qrContainer}>
-//           {loading || qrValue === null || qrValue == '' ? (
-//             <View style={modalStyles.skeleton}>
-//               <Animated.View style={[modalStyles.shimmerOverlay, shimmerStyle]}>
-//                 <LinearGradient
-//                   colors={['#f3f3f3', '#fff', '#f3f3f3']}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 0 }}
-//                   style={{ flex: 1 }}
-//                 />
-//               </Animated.View>
-//             </View>
-//           ) : (
-//             <>
-//               <QRCode
-//                 value={qrValue}
-//                 size={250}
-//                 logoSize={60}
-//                 logoBackgroundColor="#fff"
-//                 logoMargin={2}
-//                 logoBorderRagius={10}
-//                 // logo={require('../../assets/images/profile2.jpg')}
-//                 linearGradient={multiColor}
-//                 enableLinearGradient
-//               />
-//             </>
-//           )}
-//         </View>
-//         <View style={modalStyles.info}>
-//           <CustomeText style={modalStyles.infoText1} fontFamily="Okra-Medium">
-//             Ensure you're on the same Wi-Fi network.
-//           </CustomeText>
-
-//           <CustomeText style={modalStyles.infoText2} fontFamily="Okra-Medium">
-//             Ask the sender to scan this QR code to connect and transfer files.
-//           </CustomeText>
-//         </View>
-
-//         <ActivityIndicator
-//           size="small"
-//           color="#000"
-//           style={{ alignSelf: 'center' }}
-//         />
-
-//         <TouchableOpacity onPress={onClose} style={modalStyles.closeButton}>
-//           <Icon name="close" iconFamily="Ionicons" size={24} color="#000" />
-//         </TouchableOpacity>
-//       </View>
-//     </Modal>
-//   );
-// };
-
-// export default QRGenerateModal;
-
 import {
   View,
-  Modal,
   ActivityIndicator,
   TouchableOpacity,
   Dimensions,
   StatusBar,
   Platform,
   StyleSheet,
-} from 'react-native';
-import React, { useEffect, useState } from 'react';
-
-import Animated, {
+  Animated,
   Easing,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  withDelay,
-} from 'react-native-reanimated';
+  BackHandler,
+  ScrollView,
+} from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { moderateScale } from 'react-native-size-matters';
 import LinearGradient from 'react-native-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import CustomeText from '../global/CustomeText';
@@ -162,595 +22,143 @@ import { getLocalIPAddress } from '../../utils/networkUtils';
 import { navigate } from '../../utils/NavigationUtil';
 import { useTCP } from '../../service/TCPProvider';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_W } = Dimensions.get('window');
+const isTablet = SCREEN_W >= 768;
 
-// const QRGenerateModal = ({ visible, onClose }) => {
-//   const { startServer, server, isConnected } = useTCP();
-//   const [loading, setLoading] = useState(true);
-//   const [qrValue, setQRValue] = useState('');
+const ms = (n, factor = isTablet ? 0.2 : 0.5) => moderateScale(n, factor);
 
-//   // Animation values
-//   const fadeAnim = useSharedValue(0);
-//   const scaleAnim = useSharedValue(0.95);
-//   const pulseAnim = useSharedValue(1);
-//   const rotateAnim = useSharedValue(0);
-//   const shimmerAnim = useSharedValue(-width);
-
-//   const containerStyle = useAnimatedStyle(() => ({
-//     opacity: fadeAnim.value,
-//     transform: [{ scale: scaleAnim.value }],
-//   }));
-
-//   const pulseStyle = useAnimatedStyle(() => ({
-//     transform: [{ scale: pulseAnim.value }],
-//   }));
-
-//   const ringStyle = useAnimatedStyle(() => ({
-//     transform: [{ rotate: `${rotateAnim.value}deg` }],
-//   }));
-
-//   const shimmerStyle = useAnimatedStyle(() => ({
-//     transform: [{ translateX: shimmerAnim.value }],
-//   }));
-
-//   useEffect(() => {
-//     // Entrance animation
-//     if (visible) {
-//       fadeAnim.value = withTiming(1, { duration: 400 });
-//       scaleAnim.value = withTiming(1, { duration: 400 });
-//     } else {
-//       fadeAnim.value = withTiming(0, { duration: 300 });
-//       scaleAnim.value = withTiming(0.95, { duration: 300 });
-//     }
-
-//     // Subtle pulse animation for the QR container (not the QR code itself)
-//     pulseAnim.value = withRepeat(
-//       withSequence(
-//         withTiming(1.02, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-//         withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-//       ),
-//       -1,
-//       true,
-//     );
-
-//     // Slow rotation for outer ring
-//     rotateAnim.value = withRepeat(
-//       withTiming(360, { duration: 10000, easing: Easing.linear }),
-//       -1,
-//     );
-
-//     // Shimmer effect for loading state
-//     shimmerAnim.value = withRepeat(
-//       withSequence(
-//         withTiming(width, { duration: 1500, easing: Easing.linear }),
-//         withDelay(500, withTiming(-width, { duration: 0 })),
-//       ),
-//       -1,
-//     );
-//   }, [visible]);
-
-//   const setupServer = async () => {
-//     try {
-//       const deviceName = await DeviceInfo.getDeviceName();
-//       const ip = await getLocalIPAddress();
-//       const port = 4000;
-
-//       if (server) {
-//         setQRValue(`tcp://${ip}:${port}|${deviceName}`);
-//         setLoading(false);
-//         return;
-//       }
-
-//       startServer(port);
-//       setQRValue(`tcp://${ip}:${port}|${deviceName}`);
-//       console.log(`Server Info: ${ip}:${port}`);
-//       setLoading(false);
-//     } catch (error) {
-//       console.error('Error setting up server:', error);
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (isConnected) {
-//       onClose();
-//       navigate('ConnectionScreen');
-//     }
-//   }, [isConnected]);
-
-//   useEffect(() => {
-//     if (visible) {
-//       setLoading(true);
-//       setupServer();
-//     } else {
-//       setQRValue('');
-//     }
-//   }, [visible]);
-
-//   return (
-//     <Modal
-//       animationType="fade"
-//       transparent={true}
-//       visible={visible}
-//       onRequestClose={onClose}
-//       statusBarTranslucent
-//     >
-//       <StatusBar backgroundColor="rgba(0,0,0,0.9)" barStyle="light-content" />
-//       <LinearGradient
-//         colors={[
-//           'rgba(0,0,0,0.95)',
-//           'rgba(0,20,40,0.98)',
-//           'rgba(0,40,80,0.95)',
-//         ]}
-//         style={styles.gradientBackground}
-//         start={{ x: 0, y: 0 }}
-//         end={{ x: 1, y: 1 }}
-//       >
-//         <View style={styles.overlay}>
-//           <Animated.View style={[styles.container, containerStyle]}>
-//             {/* Header */}
-//             <View style={styles.header}>
-//               <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={24}>
-//                 Your QR Code
-//               </CustomeText>
-//               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-//                 <Icon
-//                   name="close"
-//                   iconFamily="Ionicons"
-//                   size={24}
-//                   color="#fff"
-//                 />
-//               </TouchableOpacity>
-//             </View>
-
-//             {/* QR Code Section */}
-//             <View style={styles.qrSection}>
-//               {/* Animated Rings Container - Only these animate, not the QR code */}
-//               <View style={styles.ringsContainer}>
-//                 {/* Outer Ring */}
-//                 <Animated.View style={[styles.outerRing, ringStyle]}>
-//                   <LinearGradient
-//                     colors={['#4A90E2', '#5C6BC0', '#4A90E2']}
-//                     style={styles.ringGradient}
-//                     start={{ x: 0, y: 0 }}
-//                     end={{ x: 1, y: 1 }}
-//                   />
-//                 </Animated.View>
-
-//                 {/* Inner Ring */}
-//                 <Animated.View style={[styles.innerRing, pulseStyle]}>
-//                   <LinearGradient
-//                     colors={['rgba(74,144,226,0.2)', 'rgba(92,107,192,0.2)']}
-//                     style={styles.ringGradient}
-//                     start={{ x: 0, y: 0 }}
-//                     end={{ x: 1, y: 1 }}
-//                   />
-//                 </Animated.View>
-
-//                 {/* QR Code Container - FIXED: No animations on the QR code itself */}
-//                 <View style={styles.qrContainer}>
-//                   {loading || !qrValue ? (
-//                     <View style={styles.skeleton}>
-//                       <Animated.View
-//                         style={[styles.shimmerOverlay, shimmerStyle]}
-//                       >
-//                         <LinearGradient
-//                           colors={[
-//                             'transparent',
-//                             'rgba(255,255,255,0.1)',
-//                             'transparent',
-//                           ]}
-//                           start={{ x: 0, y: 0 }}
-//                           end={{ x: 1, y: 0 }}
-//                           style={StyleSheet.absoluteFill}
-//                         />
-//                       </Animated.View>
-//                       <View style={styles.qrIconContainer}>
-//                         <Icon
-//                           name="qrcode"
-//                           iconFamily="MaterialCommunityIcons"
-//                           size={60}
-//                           color="#4A90E2"
-//                         />
-//                       </View>
-//                     </View>
-//                   ) : (
-//                     <View style={styles.qrWrapper}>
-//                       <QRCode
-//                         value={qrValue}
-//                         size={200}
-//                         logoBackgroundColor="#fff"
-//                         logoBorderRadius={25}
-//                         logoMargin={2}
-//                         color="#000"
-//                         backgroundColor="#fff"
-//                       />
-//                       {/* Small checkmark overlay for stability */}
-//                       <View style={styles.qrCheckmark}>
-//                         <View style={styles.checkmarkDot} />
-//                       </View>
-//                     </View>
-//                   )}
-//                 </View>
-//               </View>
-
-//               {/* Device Info Card */}
-//               {!loading && qrValue && (
-//                 <LinearGradient
-//                   colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-//                   style={styles.deviceCard}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 1 }}
-//                 >
-//                   <Icon
-//                     name="phone-portrait"
-//                     iconFamily="Ionicons"
-//                     size={16}
-//                     color="#4A90E2"
-//                   />
-//                   <CustomeText
-//                     color="#fff"
-//                     fontSize={14}
-//                     fontFamily="Okra-Medium"
-//                   >
-//                     {qrValue?.split('|')[1] || 'Your Device'}
-//                   </CustomeText>
-//                   <View style={styles.activeDot} />
-//                 </LinearGradient>
-//               )}
-//             </View>
-
-//             {/* Info Grid */}
-//             <View style={styles.infoGrid}>
-//               <View style={styles.infoCard}>
-//                 <LinearGradient
-//                   colors={['rgba(74,144,226,0.15)', 'rgba(92,107,192,0.15)']}
-//                   style={styles.infoCardGradient}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 1 }}
-//                 >
-//                   <Icon
-//                     name="wifi"
-//                     iconFamily="Ionicons"
-//                     size={20}
-//                     color="#4A90E2"
-//                   />
-//                   <CustomeText
-//                     color="#fff"
-//                     fontSize={12}
-//                     fontFamily="Okra-Medium"
-//                   >
-//                     Same Network
-//                   </CustomeText>
-//                 </LinearGradient>
-//               </View>
-
-//               <View style={styles.infoCard}>
-//                 <LinearGradient
-//                   colors={['rgba(74,144,226,0.15)', 'rgba(92,107,192,0.15)']}
-//                   style={styles.infoCardGradient}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 1 }}
-//                 >
-//                   <Icon
-//                     name="shield-checkmark"
-//                     iconFamily="Ionicons"
-//                     size={20}
-//                     color="#4A90E2"
-//                   />
-//                   <CustomeText
-//                     color="#fff"
-//                     fontSize={12}
-//                     fontFamily="Okra-Medium"
-//                   >
-//                     Secure
-//                   </CustomeText>
-//                 </LinearGradient>
-//               </View>
-
-//               <View style={styles.infoCard}>
-//                 <LinearGradient
-//                   colors={['rgba(74,144,226,0.15)', 'rgba(92,107,192,0.15)']}
-//                   style={styles.infoCardGradient}
-//                   start={{ x: 0, y: 0 }}
-//                   end={{ x: 1, y: 1 }}
-//                 >
-//                   <Icon
-//                     name="flash"
-//                     iconFamily="Ionicons"
-//                     size={20}
-//                     color="#4A90E2"
-//                   />
-//                   <CustomeText
-//                     color="#fff"
-//                     fontSize={12}
-//                     fontFamily="Okra-Medium"
-//                   >
-//                     Fast
-//                   </CustomeText>
-//                 </LinearGradient>
-//               </View>
-//             </View>
-
-//             {/* Status Bar */}
-//             <View style={styles.statusBar}>
-//               <View style={styles.statusContent}>
-//                 {loading ? (
-//                   <>
-//                     <ActivityIndicator size="small" color="#4A90E2" />
-//                     <CustomeText color="rgba(255,255,255,0.6)" fontSize={13}>
-//                       Generating secure QR code...
-//                     </CustomeText>
-//                   </>
-//                 ) : (
-//                   <>
-//                     <View style={styles.pulseDot} />
-//                     <CustomeText color="rgba(255,255,255,0.8)" fontSize={13}>
-//                       Ready to scan • Waiting for connection
-//                     </CustomeText>
-//                   </>
-//                 )}
-//               </View>
-//             </View>
-
-//             {/* Instruction */}
-//             <View style={styles.instruction}>
-//               <CustomeText color="rgba(255,255,255,0.4)" fontSize={12}>
-//                 Ask sender to scan this code with their device
-//               </CustomeText>
-//             </View>
-//           </Animated.View>
-//         </View>
-//       </LinearGradient>
-//     </Modal>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   overlay: {
-//     flex: 1,
-//     // backgroundColor: 'rgba(0,0,0,0.95)',
-//   },
-//   gradientBackground: {
-//     flex: 1,
-//   },
-//   container: {
-//     flex: 1,
-//     paddingHorizontal: 20,
-//     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 20,
-//   },
-//   header: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//     paddingVertical: 16,
-//   },
-//   closeButton: {
-//     width: 44,
-//     height: 44,
-//     borderRadius: 22,
-//     backgroundColor: 'rgba(255,255,255,0.1)',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   qrSection: {
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     marginVertical: 20,
-//   },
-//   ringsContainer: {
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     position: 'relative',
-//   },
-//   outerRing: {
-//     position: 'absolute',
-//     width: width * 0.8,
-//     height: width * 0.8,
-//     borderRadius: width * 0.4,
-//     overflow: 'hidden',
-//   },
-//   innerRing: {
-//     position: 'absolute',
-//     width: width * 0.65,
-//     height: width * 0.65,
-//     borderRadius: width * 0.325,
-//     overflow: 'hidden',
-//   },
-//   ringGradient: {
-//     flex: 1,
-//   },
-//   qrContainer: {
-//     width: 200,
-//     height: 200,
-//     borderRadius: 30,
-//     overflow: 'hidden',
-//     backgroundColor: '#fff',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     elevation: 20,
-//     shadowColor: '#4A90E2',
-//     shadowOffset: { width: 0, height: 0 },
-//     shadowOpacity: 0.3,
-//     shadowRadius: 20,
-//     zIndex: 10,
-//   },
-//   skeleton: {
-//     width: '100%',
-//     height: '100%',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: '#1a1a1a',
-//     position: 'relative',
-//   },
-//   shimmerOverlay: {
-//     position: 'absolute',
-//     width: '100%',
-//     height: '100%',
-//   },
-//   qrIconContainer: {
-//     width: 100,
-//     height: 100,
-//     borderRadius: 50,
-//     backgroundColor: 'rgba(74,144,226,0.1)',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//   },
-//   qrWrapper: {
-//     position: 'relative',
-//   },
-//   qrCheckmark: {
-//     position: 'absolute',
-//     bottom: -5,
-//     right: -5,
-//     width: 24,
-//     height: 24,
-//     borderRadius: 12,
-//     backgroundColor: '#4A90E2',
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     borderWidth: 2,
-//     borderColor: '#fff',
-//   },
-//   checkmarkDot: {
-//     width: 8,
-//     height: 8,
-//     borderRadius: 4,
-//     backgroundColor: '#fff',
-//   },
-//   deviceCard: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginTop: 20,
-//     paddingHorizontal: 20,
-//     paddingVertical: 12,
-//     borderRadius: 30,
-//     gap: 10,
-//   },
-//   activeDot: {
-//     width: 8,
-//     height: 8,
-//     borderRadius: 4,
-//     backgroundColor: '#4CAF50',
-//     marginLeft: 5,
-//   },
-//   infoGrid: {
-//     flexDirection: 'row',
-//     justifyContent: 'center',
-//     gap: 12,
-//     marginTop: 30,
-//   },
-//   infoCard: {
-//     borderRadius: 16,
-//     overflow: 'hidden',
-//     flex: 1,
-//   },
-//   infoCardGradient: {
-//     padding: 12,
-//     alignItems: 'center',
-//     gap: 6,
-//   },
-//   statusBar: {
-//     marginTop: 30,
-//     alignItems: 'center',
-//   },
-//   statusContent: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     gap: 10,
-//     backgroundColor: 'rgba(255,255,255,0.05)',
-//     paddingHorizontal: 20,
-//     paddingVertical: 12,
-//     borderRadius: 30,
-//   },
-//   pulseDot: {
-//     width: 8,
-//     height: 8,
-//     borderRadius: 4,
-//     backgroundColor: '#4CAF50',
-//   },
-//   instruction: {
-//     position: 'absolute',
-//     bottom: 80,
-//     left: 0,
-//     right: 0,
-//     alignItems: 'center',
-//   },
-// });
+const RING_SIZE = ms(200);
+const QR_SIZE = ms(148);
 
 const QRGenerateModal = ({ visible, onClose }) => {
   const { startServer, server, isConnected } = useTCP();
   const [loading, setLoading] = useState(true);
   const [qrValue, setQRValue] = useState('');
+  const [isRendered, setIsRendered] = useState(false);
 
-  // Animation values
-  const fadeAnim = useSharedValue(0);
-  const scaleAnim = useSharedValue(0.95);
-  const pulseAnim = useSharedValue(1);
-  const rotateAnim = useSharedValue(0);
-  const shimmerAnim = useSharedValue(-width);
-  const glowAnim = useSharedValue(0);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.96)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(-SCREEN_W)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
-  const containerStyle = useAnimatedStyle(() => ({
-    opacity: fadeAnim.value,
-    transform: [{ scale: scaleAnim.value }],
-  }));
+  const loopAnimsRef = useRef([]);
 
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseAnim.value }],
-  }));
+  const stopAllLoops = () => {
+    loopAnimsRef.current.forEach(a => a.stop());
+    loopAnimsRef.current = [];
+  };
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotateAnim.value}deg` }],
-  }));
-
-  const shimmerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shimmerAnim.value }],
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: glowAnim.value,
-  }));
+  const startLoops = () => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 2000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 12000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    const glow = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 0.8,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.3,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    const shimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, {
+          toValue: SCREEN_W,
+          duration: 1500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.delay(500),
+        Animated.timing(shimmerAnim, {
+          toValue: -SCREEN_W,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    rotate.start();
+    glow.start();
+    shimmer.start();
+    loopAnimsRef.current = [pulse, rotate, glow, shimmer];
+  };
 
   useEffect(() => {
     if (visible) {
-      fadeAnim.value = withTiming(1, { duration: 400 });
-      scaleAnim.value = withTiming(1, { duration: 400 });
+      setIsRendered(true);
+      fadeAnim.setValue(0);
+      scaleAnim.setValue(0.96);
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) startLoops();
+      });
+
+      StatusBar.setBarStyle('light-content', true);
+      if (Platform.OS === 'android')
+        StatusBar.setBackgroundColor('rgba(0,0,0,0.9)', true);
     } else {
-      fadeAnim.value = withTiming(0, { duration: 300 });
-      scaleAnim.value = withTiming(0.95, { duration: 300 });
+      stopAllLoops();
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0.96,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) setIsRendered(false);
+      });
+
+      StatusBar.setBarStyle('dark-content', true);
+      if (Platform.OS === 'android')
+        StatusBar.setBackgroundColor('#1B2B4B', true);
     }
-
-    pulseAnim.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    rotateAnim.value = withRepeat(
-      withTiming(360, { duration: 12000, easing: Easing.linear }),
-      -1,
-    );
-
-    glowAnim.value = withRepeat(
-      withSequence(
-        withTiming(0.8, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.3, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
-      ),
-      -1,
-      true,
-    );
-
-    shimmerAnim.value = withRepeat(
-      withSequence(
-        withTiming(width, { duration: 1500, easing: Easing.linear }),
-        withDelay(500, withTiming(-width, { duration: 0 })),
-      ),
-      -1,
-    );
   }, [visible]);
 
   const setupServer = async () => {
@@ -758,22 +166,26 @@ const QRGenerateModal = ({ visible, onClose }) => {
       const deviceName = await DeviceInfo.getDeviceName();
       const ip = await getLocalIPAddress();
       const port = 4000;
-
       if (server) {
         setQRValue(`tcp://${ip}:${port}|${deviceName}`);
         setLoading(false);
         return;
       }
-
       startServer(port);
       setQRValue(`tcp://${ip}:${port}|${deviceName}`);
-      console.log(`Server Info: ${ip}:${port}`);
       setLoading(false);
-    } catch (error) {
-      console.error('Error setting up server:', error);
+    } catch (e) {
+      console.error('Server setup error:', e);
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (visible) {
+      setLoading(true);
+      setupServer();
+    } else setQRValue('');
+  }, [visible]);
 
   useEffect(() => {
     if (isConnected) {
@@ -783,94 +195,105 @@ const QRGenerateModal = ({ visible, onClose }) => {
   }, [isConnected]);
 
   useEffect(() => {
-    if (visible) {
-      setLoading(true);
-      setupServer();
-    } else {
-      setQRValue('');
-    }
+    if (!visible) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
   }, [visible]);
 
-  // Calculate responsive sizes
-  const ringSize = width * 0.65;
-  const qrSize = 180;
+  useEffect(() => () => stopAllLoops(), []);
+
+  if (!isRendered) return null;
+
+  const rotateDeg = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-      statusBarTranslucent
+    <Animated.View
+      style={[StyleSheet.absoluteFill, styles.overlay, { opacity: fadeAnim }]}
+      pointerEvents={visible ? 'auto' : 'none'}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.9)" barStyle="light-content" />
-
       <LinearGradient
         colors={['#0f0c29', '#302b63', '#24243e']}
-        style={styles.gradientBackground}
+        style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+      />
+      {/* Centred card (maxWidth caps size on iPad) */}
+      <Animated.View
+        style={[styles.card, { transform: [{ scale: scaleAnim }] }]}
       >
-        <Animated.View style={[styles.container, containerStyle]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={24}>
-                QR Code
-              </CustomeText>
-              <View style={styles.headerLine} />
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
-                style={styles.closeButtonGradient}
-              >
-                <Icon
-                  name="close"
-                  iconFamily="Ionicons"
-                  size={22}
-                  color="#fff"
-                />
-              </LinearGradient>
-            </TouchableOpacity>
+        {/* ── Header (Fixed at top) ─────────────────────────────── */}
+        <View style={styles.header}>
+          <View>
+            <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={ms(22)}>
+              QR Code
+            </CustomeText>
+            <View style={styles.headerLine} />
           </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={styles.closeButtonGradient}
+            >
+              <Icon
+                name="close"
+                iconFamily="Ionicons"
+                size={ms(22)}
+                color="#fff"
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
-          {/* QR Code Section - Centered */}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* ── QR Section ────────────────────────────────────────── */}
           <View style={styles.qrSection}>
-            {/* Glow effect - behind rings */}
+            {/* Glow behind rings */}
             <Animated.View
               style={[
                 styles.glowEffect,
-                glowStyle,
                 {
-                  width: ringSize * 1.1,
-                  height: ringSize * 1.1,
-                  borderRadius: ringSize * 0.6,
-                  marginTop: -80,
+                  opacity: glowAnim,
+                  width: RING_SIZE * 1.15,
+                  height: RING_SIZE * 1.15,
+                  borderRadius: RING_SIZE * 0.6,
                 },
               ]}
             />
 
-            {/* Rings Container */}
+            {/* Rings container */}
             <View
               style={[
                 styles.ringsContainer,
-                { width: ringSize, height: ringSize },
+                { width: RING_SIZE, height: RING_SIZE },
               ]}
             >
               {/* Outer rotating ring */}
               <Animated.View
-                style={[styles.outerRing, ringStyle, StyleSheet.absoluteFill]}
+                style={[
+                  styles.outerRing,
+                  { transform: [{ rotate: rotateDeg }] },
+                  StyleSheet.absoluteFill,
+                ]}
               >
                 <LinearGradient
                   colors={['#667eea', '#764ba2', '#6b8cff']}
-                  style={styles.ringGradient}
+                  style={[styles.ringGradient, { borderRadius: 1000 }]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
               </Animated.View>
 
-              {/* Middle ring with particles */}
+              {/* Particle dots */}
               <View style={[styles.middleRing, StyleSheet.absoluteFill]}>
                 {[...Array(8)].map((_, i) => (
                   <View
@@ -880,7 +303,7 @@ const QRGenerateModal = ({ visible, onClose }) => {
                       {
                         transform: [
                           { rotate: `${i * 45}deg` },
-                          { translateY: -(ringSize * 0.35) },
+                          { translateY: -(RING_SIZE * 0.35) },
                         ],
                       },
                     ]}
@@ -892,30 +315,36 @@ const QRGenerateModal = ({ visible, onClose }) => {
               <Animated.View
                 style={[
                   styles.innerRing,
-                  pulseStyle,
                   {
-                    width: ringSize * 0.75,
-                    height: ringSize * 0.75,
-                    borderRadius: ringSize * 0.375,
+                    transform: [{ scale: pulseAnim }],
+                    width: RING_SIZE * 0.75,
+                    height: RING_SIZE * 0.75,
+                    borderRadius: RING_SIZE * 0.375,
                   },
                 ]}
               >
                 <LinearGradient
                   colors={['rgba(102,126,234,0.3)', 'rgba(118,75,162,0.3)']}
-                  style={styles.ringGradient}
+                  style={[styles.ringGradient, { borderRadius: 1000 }]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                 />
               </Animated.View>
 
-              {/* QR Code Container */}
+              {/* QR box */}
               <View
-                style={[styles.qrContainer, { width: qrSize, height: qrSize }]}
+                style={[
+                  styles.qrContainer,
+                  { width: QR_SIZE, height: QR_SIZE },
+                ]}
               >
                 {loading || !qrValue ? (
                   <View style={styles.skeleton}>
                     <Animated.View
-                      style={[styles.shimmerOverlay, shimmerStyle]}
+                      style={[
+                        styles.shimmerOverlay,
+                        { transform: [{ translateX: shimmerAnim }] },
+                      ]}
                     >
                       <LinearGradient
                         colors={[
@@ -928,8 +357,12 @@ const QRGenerateModal = ({ visible, onClose }) => {
                         style={StyleSheet.absoluteFill}
                       />
                     </Animated.View>
-
-                    <Animated.View style={[styles.loadingIcon, pulseStyle]}>
+                    <Animated.View
+                      style={[
+                        styles.loadingIcon,
+                        { transform: [{ scale: pulseAnim }] },
+                      ]}
+                    >
                       <LinearGradient
                         colors={['#667eea', '#764ba2']}
                         style={styles.loadingIconGradient}
@@ -937,7 +370,7 @@ const QRGenerateModal = ({ visible, onClose }) => {
                         <Icon
                           name="qrcode-scan"
                           iconFamily="MaterialCommunityIcons"
-                          size={40}
+                          size={ms(34)}
                           color="#fff"
                         />
                       </LinearGradient>
@@ -947,48 +380,18 @@ const QRGenerateModal = ({ visible, onClose }) => {
                   <View style={styles.qrWrapper}>
                     <QRCode
                       value={qrValue}
-                      size={qrSize - 20}
-                      // logo={require('../../assets/images/profile2.jpg')}
-                      // logoSize={40}
+                      size={QR_SIZE - ms(18)}
                       logoBackgroundColor="#fff"
                       logoBorderRadius={20}
                       logoMargin={2}
                       color="#2d3748"
                       backgroundColor="#fff"
                     />
-
-                    {/* Decorative corners */}
-                    <View
-                      style={[
-                        styles.qrCorner,
-                        styles.cornerTL,
-                        { left: -3, top: -3 },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.qrCorner,
-                        styles.cornerTR,
-                        { right: -3, top: -3 },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.qrCorner,
-                        styles.cornerBL,
-                        { left: -3, bottom: -3 },
-                      ]}
-                    />
-                    <View
-                      style={[
-                        styles.qrCorner,
-                        styles.cornerBR,
-                        { right: -3, bottom: -3 },
-                      ]}
-                    />
-
-                    {/* Success checkmark */}
-                    <View style={[styles.qrBadge, { bottom: -5, right: -5 }]}>
+                    <View style={[styles.qrCorner, styles.cornerTL]} />
+                    <View style={[styles.qrCorner, styles.cornerTR]} />
+                    <View style={[styles.qrCorner, styles.cornerBL]} />
+                    <View style={[styles.qrCorner, styles.cornerBR]} />
+                    <View style={styles.qrBadge}>
                       <LinearGradient
                         colors={['#4CAF50', '#45a049']}
                         style={styles.qrBadgeGradient}
@@ -996,7 +399,7 @@ const QRGenerateModal = ({ visible, onClose }) => {
                         <Icon
                           name="checkmark"
                           iconFamily="Ionicons"
-                          size={10}
+                          size={ms(9)}
                           color="#fff"
                         />
                       </LinearGradient>
@@ -1006,7 +409,7 @@ const QRGenerateModal = ({ visible, onClose }) => {
               </View>
             </View>
 
-            {/* Device Info */}
+            {/* Device chip */}
             {!loading && qrValue && (
               <LinearGradient
                 colors={['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
@@ -1014,172 +417,162 @@ const QRGenerateModal = ({ visible, onClose }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <View style={styles.deviceIcon}>
-                  <Icon
-                    name="phone-portrait"
-                    iconFamily="Ionicons"
-                    size={14}
-                    color="#667eea"
-                  />
-                </View>
-                <CustomeText
-                  color="#fff"
-                  fontSize={13}
-                  fontFamily="Okra-Medium"
-                  numberOfLines={1}
-                >
-                  {qrValue?.split('|')[1]?.substring(0, 18) || 'Your Device'}
-                </CustomeText>
-                <View style={styles.liveBadge}>
-                  <View style={styles.liveDot} />
-                  <CustomeText color="#4CAF50" fontSize={9}>
-                    LIVE
+                <View style={styles.deviceCardRow}>
+                  <View style={styles.deviceIcon}>
+                    <Icon
+                      name="phone-portrait"
+                      iconFamily="Ionicons"
+                      size={ms(13)}
+                      color="#667eea"
+                    />
+                  </View>
+                  <CustomeText
+                    color="#fff"
+                    fontSize={ms(12)}
+                    fontFamily="Okra-Medium"
+                    numberOfLines={1}
+                  >
+                    {qrValue?.split('|')[1]?.substring(0, 20) || 'Your Device'}
                   </CustomeText>
+                  <View style={styles.liveBadge}>
+                    <View style={styles.liveDot} />
+                    <CustomeText color="#4CAF50" fontSize={ms(9)}>
+                      LIVE
+                    </CustomeText>
+                  </View>
                 </View>
               </LinearGradient>
             )}
           </View>
 
-          {/* Stats Grid - Simplified */}
+          {/* ── Stats ─────────────────────────────────────────────── */}
           <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.statIcon}
-              >
-                <Icon
-                  name="wifi"
-                  iconFamily="Ionicons"
-                  size={16}
+            {[
+              { icon: 'wifi', label: 'Network', sub: 'Same Wi-Fi' },
+              { icon: 'shield-checkmark', label: 'Secure', sub: 'End-to-end' },
+              { icon: 'flash', label: 'Speed', sub: 'Instant' },
+            ].map(item => (
+              <View key={item.label} style={styles.statItem}>
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={styles.statIcon}
+                >
+                  <Icon
+                    name={item.icon}
+                    iconFamily="Ionicons"
+                    size={ms(15)}
+                    color="#fff"
+                  />
+                </LinearGradient>
+                <CustomeText
                   color="#fff"
-                />
-              </LinearGradient>
-              <View>
-                <CustomeText color="#fff" fontSize={12} fontFamily="Okra-Bold">
-                  Network
+                  fontSize={ms(11)}
+                  fontFamily="Okra-Bold"
+                >
+                  {item.label}
                 </CustomeText>
-                <CustomeText color="rgba(255,255,255,0.5)" fontSize={8}>
-                  Same Wi-Fi
+                <CustomeText color="rgba(255,255,255,0.5)" fontSize={ms(8)}>
+                  {item.sub}
                 </CustomeText>
               </View>
-            </View>
-
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.statIcon}
-              >
-                <Icon
-                  name="shield-checkmark"
-                  iconFamily="Ionicons"
-                  size={16}
-                  color="#fff"
-                />
-              </LinearGradient>
-              <View>
-                <CustomeText color="#fff" fontSize={12} fontFamily="Okra-Bold">
-                  Secure
-                </CustomeText>
-                <CustomeText color="rgba(255,255,255,0.5)" fontSize={8}>
-                  End-to-end
-                </CustomeText>
-              </View>
-            </View>
-
-            <View style={styles.statItem}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.statIcon}
-              >
-                <Icon
-                  name="flash"
-                  iconFamily="Ionicons"
-                  size={16}
-                  color="#fff"
-                />
-              </LinearGradient>
-              <View>
-                <CustomeText color="#fff" fontSize={12} fontFamily="Okra-Bold">
-                  Speed
-                </CustomeText>
-                <CustomeText color="rgba(255,255,255,0.5)" fontSize={8}>
-                  Instant
-                </CustomeText>
-              </View>
-            </View>
+            ))}
           </View>
 
-          {/* Status Bar */}
+          {/* ── Status strip ──────────────────────────────────────── */}
           <View style={styles.statusBar}>
             <LinearGradient
               colors={['rgba(102,126,234,0.2)', 'rgba(118,75,162,0.2)']}
               style={styles.statusGradient}
             >
-              {loading ? (
-                <>
-                  <ActivityIndicator size="small" color="#667eea" />
-                  <CustomeText color="rgba(255,255,255,0.8)" fontSize={12}>
-                    Generating...
-                  </CustomeText>
-                </>
-              ) : (
-                <>
-                  <View style={styles.scanningPulse}>
-                    <View style={[styles.ripple, { width: 20, height: 20 }]} />
-                    <View style={[styles.ripple, { width: 28, height: 28 }]} />
-                    <View style={[styles.ripple, { width: 36, height: 36 }]} />
-                    <View style={styles.activePulse} />
-                  </View>
-                  <CustomeText
-                    color="#fff"
-                    fontSize={12}
-                    fontFamily="Okra-Medium"
-                  >
-                    Ready to scan
-                  </CustomeText>
-                </>
-              )}
+              <View style={styles.statusRow}>
+                {loading ? (
+                  <>
+                    <ActivityIndicator size="small" color="#667eea" />
+                    <CustomeText
+                      color="rgba(255,255,255,0.8)"
+                      fontSize={ms(12)}
+                    >
+                      Generating...
+                    </CustomeText>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.scanningPulse}>
+                      {[20, 28, 36].map(sz => (
+                        <View
+                          key={sz}
+                          style={[styles.ripple, { width: sz, height: sz }]}
+                        />
+                      ))}
+                      <View style={styles.activePulse} />
+                    </View>
+                    <CustomeText
+                      color="#fff"
+                      fontSize={ms(12)}
+                      fontFamily="Okra-Medium"
+                    >
+                      Ready to scan
+                    </CustomeText>
+                  </>
+                )}
+              </View>
             </LinearGradient>
           </View>
 
-          {/* Footer */}
+          {/* ── Footer ────────────────────────────────────────────── */}
           <View style={styles.footer}>
-            <CustomeText color="rgba(255,255,255,0.5)" fontSize={10}>
+            <CustomeText color="rgba(255,255,255,0.5)" fontSize={ms(10)}>
               Show this code to the sender
             </CustomeText>
           </View>
-        </Animated.View>
-      </LinearGradient>
-    </Modal>
+        </ScrollView>
+      </Animated.View>
+    </Animated.View>
   );
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  gradientBackground: {
+  overlay: {
+    zIndex: 9999,
+    elevation: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Full-width container so header spans edge-to-edge
+  card: {
+    width: SCREEN_W,
     flex: 1,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 10,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-start', // ✅ move content to top
+    alignItems: 'center',
+    paddingHorizontal: ms(20),
+    paddingTop: ms(20),
   },
+
+  // Header
   header: {
+    paddingHorizontal: ms(20),
+    paddingTop: Platform.OS === 'ios' ? ms(isTablet ? 30 : 32) : ms(50),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    // marginBottom: ms(4),
   },
   headerLine: {
-    width: 30,
+    width: ms(30),
     height: 2,
     backgroundColor: '#667eea',
     borderRadius: 1,
-    marginTop: 4,
+    // marginTop: ms(4),
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     overflow: 'hidden',
   },
   closeButtonGradient: {
@@ -1187,24 +580,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // QR section
   qrSection: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 5,
+    marginVertical: ms(8),
+    marginBottom: ms(20),
   },
   glowEffect: {
     position: 'absolute',
     backgroundColor: '#667eea',
-    opacity: 0.15,
+    opacity: 0.12,
   },
   ringsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    overflow: 'visible',
   },
   outerRing: {
     borderRadius: 1000,
-    overflow: 'hidden',
   },
   middleRing: {
     justifyContent: 'center',
@@ -1212,21 +608,22 @@ const styles = StyleSheet.create({
   },
   ringParticle: {
     position: 'absolute',
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: ms(4),
+    height: ms(4),
+    borderRadius: ms(2),
     backgroundColor: '#667eea',
     opacity: 0.6,
   },
   innerRing: {
     position: 'absolute',
-    overflow: 'hidden',
   },
   ringGradient: {
     flex: 1,
   },
+
+  // QR code box
   qrContainer: {
-    borderRadius: 20,
+    borderRadius: ms(18),
     overflow: 'hidden',
     backgroundColor: '#fff',
     justifyContent: 'center',
@@ -1252,9 +649,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   loadingIcon: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: ms(60),
+    height: ms(60),
+    borderRadius: ms(30),
     overflow: 'hidden',
   },
   loadingIconGradient: {
@@ -1271,32 +668,21 @@ const styles = StyleSheet.create({
   },
   qrCorner: {
     position: 'absolute',
-    width: 16,
-    height: 16,
+    width: ms(14),
+    height: ms(14),
     borderColor: '#667eea',
     borderWidth: 2,
   },
-  cornerTL: {
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  cornerTR: {
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  cornerBL: {
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  cornerBR: {
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-  },
+  cornerTL: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0 },
+  cornerTR: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0 },
+  cornerBL: { bottom: -2, left: -2, borderRightWidth: 0, borderTopWidth: 0 },
+  cornerBR: { bottom: -2, right: -2, borderLeftWidth: 0, borderTopWidth: 0 },
   qrBadge: {
     position: 'absolute',
-    width: 20,
-    height: 20,
-    borderRadius: 0,
+    bottom: -4,
+    right: -4,
+    width: ms(20),
+    height: ms(20),
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: '#fff',
@@ -1306,21 +692,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // Device chip
   deviceCard: {
+    alignItems: 'center',
+    marginTop: ms(100), // ✅ increase spacing from QR
+    borderRadius: ms(24),
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  deviceCardRow: {
+    paddingHorizontal: ms(14),
+    paddingVertical: ms(7),
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 25,
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    maxWidth: width * 0.7,
+    gap: ms(8),
   },
   deviceIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: ms(24),
+    height: ms(24),
+    borderRadius: ms(12),
     backgroundColor: 'rgba(102,126,234,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1329,73 +719,77 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(76,175,80,0.15)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    gap: 2,
+    paddingHorizontal: ms(6),
+    paddingVertical: ms(2),
+    borderRadius: ms(10),
+    gap: ms(3),
   },
   liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: ms(5),
+    height: ms(5),
+    borderRadius: ms(3),
     backgroundColor: '#4CAF50',
   },
+
+  // Stats row
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 50,
-    paddingHorizontal: 10,
+    marginTop: ms(16),
+    paddingHorizontal: ms(8),
   },
   statItem: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    flex: 1,
+    gap: ms(5),
   },
   statIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: ms(38),
+    height: ms(38),
+    borderRadius: ms(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // Status strip
   statusBar: {
-    marginTop: 15,
-    alignItems: 'center',
+    marginTop: ms(14),
+    borderRadius: ms(14),
+    overflow: 'hidden',
   },
   statusGradient: {
+    borderRadius: ms(14),
+  },
+  statusRow: {
+    paddingHorizontal: ms(16),
+    paddingVertical: ms(12),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    borderRadius: 25,
-    marginTop: 20,
+    gap: ms(8),
   },
   scanningPulse: {
-    width: 20,
-    height: 20,
+    width: ms(36),
+    height: ms(36),
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  activePulse: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4CAF50',
-    position: 'absolute',
+    position: 'relative',
   },
   ripple: {
     position: 'absolute',
-    borderRadius: 1000,
-    backgroundColor: 'rgba(76,175,80,0.2)',
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(102,126,234,0.3)',
   },
+  activePulse: {
+    width: ms(10),
+    height: ms(10),
+    borderRadius: ms(5),
+    backgroundColor: '#667eea',
+  },
+
+  // Footer
   footer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
     alignItems: 'center',
+    marginTop: ms(12),
   },
 });
 

@@ -6,7 +6,7 @@ import {
   Animated,
   Text,
 } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Svg, {
   Path,
   Defs,
@@ -14,7 +14,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { screenHeight, screenWidth, svgPath } from '../../utils/Constants';
-import QRGenerateModal from '../modals/QRGenerateModal';
+
 import Icon from '../global/Icon';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -227,9 +227,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //     </View>
 //   );
 // };
-const HomeHeader = () => {
+const HomeHeader = ({ onPressProfile }) => {
   const insets = useSafeAreaInsets();
-  const [isVisible, setVisible] = useState(false);
 
   // Separate animation values
   const titleAnim = useRef(new Animated.Value(0)).current;
@@ -343,7 +342,7 @@ const HomeHeader = () => {
               }}
             >
               <Image
-                source={require('../../assets/images/logo.png')}
+                source={require('../../assets/icons/new.png')}
                 style={styles.logo}
               />
             </Animated.View>
@@ -351,9 +350,8 @@ const HomeHeader = () => {
             {/* Text Container */}
             <View style={styles.textContainer}>
               <Animated.Text style={[styles.appName]}>Share</Animated.Text>
-              <Animated.Text style={[styles.appName, styles.itText]}>
-                It
-              </Animated.Text>
+               <Animated.Text style={[styles.appName]}>Anywhere</Animated.Text>
+              
             </View>
           </Animated.View>
 
@@ -372,7 +370,7 @@ const HomeHeader = () => {
             }}
           >
             <TouchableOpacity
-              onPress={() => setVisible(true)}
+              onPress={onPressProfile}
               style={styles.profileWrapper}
             >
               <Image
@@ -399,12 +397,6 @@ const HomeHeader = () => {
         <Path fill="url(#grad)" d={svgPath} />
       </Svg>
 
-      {isVisible && (
-        <QRGenerateModal
-          visible={isVisible}
-          onClose={() => setVisible(false)}
-        />
-      )}
     </View>
   );
 };
@@ -431,14 +423,15 @@ const styles = StyleSheet.create({
   //   resizeMode: 'contain',
   // },
   logo: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     resizeMode: 'contain',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
     elevation: 8,
+    borderRadius: 8,
   },
 
   textContainer: {
@@ -448,7 +441,7 @@ const styles = StyleSheet.create({
   },
 
   appName: {
-    fontSize: 32,
+    fontSize: 25,
     fontWeight: '900',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
@@ -460,8 +453,8 @@ const styles = StyleSheet.create({
   },
 
   itText: {
-    color: '#FFD700',
-    fontSize: 36,
+    color: '#FFFFFF',
+    fontSize: 25,
     textShadowColor: 'rgba(255, 215, 0, 0.3)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,

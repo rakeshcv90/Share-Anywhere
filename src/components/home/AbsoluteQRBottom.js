@@ -1,13 +1,21 @@
-import { View, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Platform,
+  Dimensions,
+} from 'react-native';
+import React, { useRef, useEffect } from 'react';
 import { navigate } from '../../utils/NavigationUtil';
 import Icon from '../global/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import QRScannerModal from '../modals/QRScannerModal';
 import LinearGradient from 'react-native-linear-gradient';
 
-const AbsoluteQRBottom = () => {
-  const [isVisible, setVisible] = useState(false);
+const { width } = Dimensions.get('window');
+const isTablet = width > 600;
+const qrSize = isTablet ? 100 : 50;
+const AbsoluteQRBottom = ({ onScanQR, onShareQR }) => {
   const insets = useSafeAreaInsets();
   const slideUp = useRef(new Animated.Value(80)).current;
   const qrScale = useRef(new Animated.Value(0)).current;
@@ -84,7 +92,7 @@ const AbsoluteQRBottom = () => {
           >
             <TouchableOpacity
               style={styles.qrButton}
-              onPress={() => setVisible(true)}
+              onPress={onScanQR}
               activeOpacity={0.85}
             >
               <LinearGradient
@@ -97,20 +105,20 @@ const AbsoluteQRBottom = () => {
                   name="qrcode-scan"
                   iconFamily="MaterialCommunityIcons"
                   color="#fff"
-                  size={24}
+                  size={isTablet ? 25 : 20}
                 />
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Right button */}
+          {/* Right button - Show own QR code */}
           <TouchableOpacity
             style={styles.sideButton}
-            onPress={() => { }}
+            onPress={onShareQR}
             activeOpacity={0.7}
           >
             <Icon
-              name="beer-sharp"
+              name="share-social"
               iconFamily="Ionicons"
               color="#4A5568"
               size={22}
@@ -118,10 +126,6 @@ const AbsoluteQRBottom = () => {
           </TouchableOpacity>
         </View>
       </Animated.View>
-
-      {isVisible && (
-        <QRScannerModal visible={isVisible} onClose={() => setVisible(false)} />
-      )}
     </>
   );
 };
@@ -131,6 +135,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
+    alignItems: 'center',
     paddingBottom: 0,
   },
 
@@ -138,12 +143,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+
+    width: isTablet ? 800 : '100%', // ⭐ FIXED WIDTH FOR iPAD
+
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 28,
-    paddingHorizontal: 28,
+    paddingHorizontal: isTablet ? 40 : 28,
     paddingVertical: 12,
 
-    // Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -155,31 +162,40 @@ const styles = StyleSheet.create({
   },
 
   sideButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: isTablet ? 52 : 44,
+    height: isTablet ? 52 : 44,
+    borderRadius: 16,
     backgroundColor: '#F0F4FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   qrButton: {
-    marginTop: -30,
+    marginTop: isTablet ? -70 : -30, // ⭐ more pop on iPad
+
+    shadowColor: '#0072FF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   qrGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
+    width: qrSize,
+    height: qrSize,
+    borderRadius: qrSize / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0072FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 10,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: '#fff',
+  },
+  qrWrapper: {
+    position: 'absolute',
+    alignSelf: 'center',
+
+    top: -(qrSize / 2), // ⭐ PERFECT CENTER POP
   },
 });
 

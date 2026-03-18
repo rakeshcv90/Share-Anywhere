@@ -10,12 +10,15 @@ import DeviceInfo from 'react-native-device-info';
 import TcpSocket from 'react-native-tcp-socket';
 import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
-import { produce } from 'immer';
+// import { produce } from 'immer';
 import { v4 as uuidv4 } from 'uuid';
 import { receiveChunkAck, receiveFileAck, sendChunkAck } from './TCPUtils';
 import { Alert, Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
 
+// Larger chunks = fewer JSON packets = much faster throughput, but heavier individual frames
+const CHUNK_SIZE = 1024 * 256; // 256 KB per chunk
+const WINDOW_SIZE = 256;
 interface TCPContextType {
   server: any;
   client: any;
@@ -28,7 +31,7 @@ interface TCPContextType {
   startServer: (port: number) => void;
   connectToServer: (host: string, port: number, deviceName: string) => void;
   sendMessage: (message: any) => void;
-  sendFileAck: (file: any, type: 'file' | 'image') => void;
+  sendFileAck: (file: any, type: 'file' | 'image' | 'video' | 'audio') => void;
   disconnect: () => void;
 }
 
@@ -58,8 +61,6 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   const { currentChunkSet, setCurrentChunkSet, setChunkStore } =
     useChunkStore();
 
-  // ---------------- DISCONNECT ----------------
-
   const disconnect = useCallback(() => {
     if (client) {
       client.removeAllListeners();
@@ -87,8 +88,85 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     setTotalReceivedBytes(0);
     setCurrentChunkSet(null);
     setChunkStore(null);
-  }, [client, server, serverSocket]);
+  }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
 
+  const handlePacket = useCallback(
+    (parsedData: any, socket: any) => {
+      if (parsedData?.event === 'connect') {
+        setIsConnected(true);
+        setConnectedDevice(parsedData?.deviceName);
+      }
+
+      if (parsedData.event === 'file_ack') {
+        receiveFileAck(parsedData.file, socket, setReceivedFiles);
+      }
+
+      if (parsedData.event === 'send_chunk_ack') {
+        sendChunkAck(
+          parsedData.chunkNo,
+          parsedData.windowSize ?? 1,
+          socket,
+          setTotalSentBytes,
+          setSentFiles,
+        );
+      }
+
+      if (parsedData.event === 'receive_chunk_ack') {
+        receiveChunkAck(
+          parsedData.chunk,
+          parsedData.chunkNo,
+          socket,
+          setTotalReceivedBytes,
+          generateFile,
+          parsedData.windowSize ?? WINDOW_SIZE,
+        );
+      }
+    },
+
+    [],
+  );
+
+  const makeFramedReader = useCallback(
+    (socket: any) => {
+      let chunks: string[] = [];
+      let hasNewline = false;
+
+      socket.on('data', (data: any) => {
+        const str: string = data.toString('utf8');
+        chunks.push(str);
+        if (!hasNewline && str.includes('\n')) hasNewline = true;
+
+        // Only pay the cost of join + split when we have at least one boundary
+        if (!hasNewline) return;
+
+        const combined = chunks.join('');
+        chunks = [];
+        hasNewline = false;
+
+        let start = 0;
+        let boundary: number;
+        while ((boundary = combined.indexOf('\n', start)) !== -1) {
+          const packet = combined.slice(start, boundary);
+          start = boundary + 1;
+
+          if (!packet.trim()) continue;
+
+          try {
+            const parsed = JSON.parse(packet);
+            handlePacket(parsed, socket);
+          } catch {
+            console.log('Invalid JSON packet');
+          }
+        }
+
+        // Keep any incomplete tail for the next data event
+        if (start < combined.length) {
+          chunks.push(combined.slice(start));
+        }
+      });
+    },
+    [handlePacket],
+  );
   const startServer = useCallback(
     (port: number) => {
       if (server) {
@@ -102,101 +180,26 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
         socket.setNoDelay(true);
 
-        // socket.on('data', data => {
-        //   let buffer = '';
-        //   buffer += data.toString();
-        //   try {
-        //     // const parsedData = JSON.parse(data.toString());
-        //     const parsedData = JSON.parse(buffer);
-        //     buffer = '';
+        socket.setKeepAlive(true);
+        socket.setTimeout(0);
+        makeFramedReader(socket);
 
-        //     if (parsedData?.event === 'connect') {
-        //       setIsConnected(true);
-        //       setConnectedDevice(parsedData?.deviceName);
-        //     }
-
-        //     if (parsedData.event === 'file_ack') {
-        //       receiveFileAck(parsedData.file, socket, setReceivedFiles);
-        //     }
-
-        //     if (parsedData.event === 'send_chunk_ack') {
-        //       sendChunkAck(
-        //         parsedData.chunkNo,
-        //         socket,
-        //         setTotalSentBytes,
-        //         setSentFiles,
-        //       );
-        //     }
-
-        //     if (parsedData.event === 'receive_chunk_ack') {
-        //       receiveChunkAck(
-        //         parsedData.chunk,
-        //         parsedData.chunkNo,
-        //         socket,
-        //         setTotalReceivedBytes,
-        //         generateFile,
-        //       );
-        //     }
-        //   } catch (err) {
-        //     console.log('Invalid JSON received');
-        //   }
-        // });
-
-        let buffer = ''; // ✅ keep buffer OUTSIDE listener
-
-        socket.on('data', data => {
-          buffer += data.toString();
-
-          // Split messages using newline framing
-          const packets = buffer.split('\n');
-          buffer = packets.pop() || ''; // keep incomplete packet
-
-          packets.forEach(packet => {
-            if (!packet.trim()) return;
-
-            try {
-              const parsedData = JSON.parse(packet);
-
-              if (parsedData?.event === 'connect') {
-                setIsConnected(true);
-                setConnectedDevice(parsedData?.deviceName);
-              }
-
-              if (parsedData.event === 'file_ack') {
-                receiveFileAck(parsedData.file, socket, setReceivedFiles);
-              }
-
-              if (parsedData.event === 'send_chunk_ack') {
-                sendChunkAck(
-                  parsedData.chunkNo,
-                  socket,
-                  setTotalSentBytes,
-                  setSentFiles,
-                );
-              }
-
-              if (parsedData.event === 'receive_chunk_ack') {
-                receiveChunkAck(
-                  parsedData.chunk,
-                  parsedData.chunkNo,
-                  socket,
-                  setTotalReceivedBytes,
-                  generateFile,
-                );
-              }
-            } catch (err) {
-              console.log('Invalid JSON received');
-            }
-          });
-        });
-
+        // ✅ FIX: Don't disconnect on close — just mark as disconnected.
         socket.on('close', () => {
           console.log('Client disconnected');
-          disconnect();
+          setIsConnected(false);
+          setConnectedDevice(null);
+          // Cleanup partial transfers from the UI list
+          setReceivedFiles(prev => prev.filter(f => f.available));
+          setSentFiles(prev => prev.filter(f => f.available));
         });
 
         socket.on('error', err => {
           console.log('Server socket error:', err);
+          setIsConnected(false);
+          setConnectedDevice(null);
+          setReceivedFiles(prev => prev.filter(f => f.available));
+          setSentFiles(prev => prev.filter(f => f.available));
         });
       });
 
@@ -211,7 +214,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
       setServer(newServer);
     },
-    [server, disconnect],
+    [server, makeFramedReader],
   );
 
   const connectToServer = useCallback(
@@ -236,96 +239,34 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         );
       });
 
+      // newClient.setNoDelay(true);
       newClient.setNoDelay(true);
-      let buffer = '';
-      newClient.on('data', data => {
-        buffer += data.toString();
-        const packets = buffer.split('\n');
-        buffer = packets.pop() || ''; // keep incomplete packet
+      newClient.setKeepAlive(true);
+      newClient.setTimeout(0);
+      makeFramedReader(newClient);
 
-        packets.forEach(packet => {
-          if (!packet.trim()) return;
-
-          try {
-            // const parsedData = JSON.parse(data.toString());
-            const parsedData = JSON.parse(packet);
-
-            if (parsedData.event === 'file_ack') {
-              receiveFileAck(parsedData.file, newClient, setReceivedFiles);
-            }
-
-            if (parsedData.event === 'send_chunk_ack') {
-              sendChunkAck(
-                parsedData.chunkNo,
-                newClient,
-                setTotalSentBytes,
-                setSentFiles,
-              );
-            }
-
-            if (parsedData.event === 'receive_chunk_ack') {
-              receiveChunkAck(
-                parsedData.chunk,
-                parsedData.chunkNo,
-                newClient,
-                setTotalReceivedBytes,
-                generateFile,
-              );
-            }
-          } catch (err) {
-            console.log('Invalid JSON from server');
-          }
-        });
-      });
-
+      // ✅ FIX: Don't call disconnect() on close. Just update state.
       newClient.on('close', () => {
         console.log('Disconnected from server');
-        disconnect();
+        setIsConnected(false);
+        setConnectedDevice(null);
+        setClient(null); // ← clear so next scan can reconnect
+        setReceivedFiles(prev => prev.filter(f => f.available));
+        setSentFiles(prev => prev.filter(f => f.available));
       });
 
       newClient.on('error', err => {
         console.log('Client socket error:', err);
+        setIsConnected(false);
+        setClient(null); // ← clear on error too so reconnect works
+        setReceivedFiles(prev => prev.filter(f => f.available));
+        setSentFiles(prev => prev.filter(f => f.available));
       });
 
       setClient(newClient);
     },
-    [client, disconnect],
+    [client, makeFramedReader],
   );
-
-  // const generateFile = async () => {
-  //   const { chunkStore, resetChunkStore } = useChunkStore.getState();
-  //   if (!chunkStore) return;
-
-  //   if (chunkStore.totalChunks !== chunkStore.chunkArray.length) return;
-
-  //   const combinedChunks = Buffer.concat(chunkStore.chunkArray);
-
-  //   // const basePath =
-  //   //   Platform.OS === 'ios'
-  //   //     ? RNFS.DocumentDirectoryPath
-  //   //     : RNFS.DownloadDirectoryPath;
-
-  //   const basePath =
-  //     Platform.OS === 'ios'
-  //       ? RNFS.DocumentDirectoryPath
-  //       : RNFS.ExternalDirectoryPath;
-
-  //   const filePath = `${basePath}/${chunkStore.name}`;
-
-  //   await RNFS.writeFile(filePath, combinedChunks.toString('base64'), 'base64');
-
-  //   setReceivedFiles(prev =>
-  //     produce(prev, draft => {
-  //       const index = draft.findIndex(f => f.id === chunkStore.id);
-  //       if (index !== -1) {
-  //         draft[index].uri = filePath;
-  //         draft[index].available = true;
-  //       }
-  //     }),
-  //   );
-
-  //   resetChunkStore();
-  // };
 
   const generateFile = async () => {
     const { chunkStore, resetChunkStore } = useChunkStore.getState();
@@ -336,35 +277,70 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         ? RNFS.DocumentDirectoryPath
         : RNFS.ExternalDirectoryPath;
 
-    const filePath = `${basePath}/${chunkStore.name}`;
+    const tempPath = `${basePath}/.tmp_${chunkStore.name}`;
+    const finalPath = `${basePath}/${chunkStore.name}`;
+
+    try {
+      if (await RNFS.exists(tempPath)) {
+        await RNFS.moveFile(tempPath, finalPath);
+      }
+    } catch (e) {
+      console.log('Error finalizing file:', e);
+    }
 
     setReceivedFiles(prev =>
-      produce(prev, draft => {
-        const index = draft.findIndex(f => f.id === chunkStore.id);
-        if (index !== -1) {
-          draft[index].uri = filePath;
-          draft[index].available = true;
-        }
-      }),
+      prev.map(file =>
+        file.id === chunkStore.id
+          ? { ...file, uri: finalPath, available: true }
+          : file,
+      ),
     );
-
     resetChunkStore();
   };
+  const getSocket = () => client ?? serverSocket;
+  const safeWrite = useCallback(
+    (socket: any, data: any) => {
+      if (!socket) return;
+      if (!data || (typeof data === 'string' && data.trim() === '')) {
+         console.log('Skipping empty socket write');
+         return;
+      }
+      try {
+        socket.write(data);
+      } catch (err) {
+        console.log('Socket write error:', err);
+      }
+    },
+    [],
+  );
 
   const sendMessage = useCallback(
     (message: any) => {
-      const socket = client || serverSocket;
+      if (!message || (typeof message === 'object' && Object.keys(message).length === 0)) {
+        console.log('Skipping empty message send');
+        return;
+      }
+      
+      const socket = getSocket();
       if (!socket) return;
 
-      try {
-        socket.write(JSON.stringify(message) + '\n'); // ✅ add newline framing
-      } catch (err) {
-        console.log('Send message error:', err);
-      }
+      safeWrite(socket, `${JSON.stringify(message)}\n`);
     },
-    [client, serverSocket],
+    [client, serverSocket, safeWrite],
   );
+  const getFileExtension = (file: any) => {
+    const name = file?.name || file?.fileName || '';
 
+    if (name.includes('.')) {
+      return name.split('.').pop().toLowerCase();
+    }
+
+    if (file?.type?.includes('/')) {
+      return file.type.split('/').pop();
+    }
+
+    return file?.type || 'file';
+  };
   const sendFileAck = async (
     file: any,
     type: 'image' | 'file' | 'video' | 'audio',
@@ -373,70 +349,116 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       Alert.alert('Wait for current file to be sent!');
       return;
     }
+
     if (!file?.uri) {
       console.log('Invalid file object:', file);
       Alert.alert('Invalid file selected');
       return;
     }
+
     const normalizedPath =
       Platform.OS === 'ios' ? file?.uri?.replace('file://', '') : file?.uri;
-    const fileData = await RNFS.readFile(normalizedPath, 'base64');
-    const buffer = Buffer.from(fileData, 'base64');
-
-    const CHUNK_SIZE = 1024 * 8;
-    let totalChunks = 0;
-    let offset = 0;
-    let chunkArray = [];
-
-    while (offset < buffer?.length) {
-      const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
-      totalChunks += 1;
-      chunkArray.push(chunk);
-      offset += chunk.length;
-    }
-    const rawData = {
-      id: uuidv4(),
-      name: type === 'file' ? file?.name : file?.fileName,
-      size: type === 'file' ? file?.size : file?.fileSize,
-      mimeType: type === 'file' ? 'file' : '.jpg',
-      totalChunks,
-    };
-
-    setCurrentChunkSet({
-      id: rawData?.id,
-      chunkArray,
-      totalChunks,
-    });
-    setSentFiles((prevData: any) =>
-      produce(prevData, (draft: any) => {
-        draft.push({
-          ...rawData,
-          uri: file?.uri,
-        });
-      }),
-    );
-    const socket = client || serverSocket;
+    const socket = getSocket();
+    // const socket = client || serverSocket;
     if (!socket) return;
 
-    try {
-      console.log('FILE ACKNOWLEDGE DONE✅');
-      // socket.write(
-      //   JSON.stringify({
-      //     event: 'file_ack',
-      //     file: rawData,
-      //   }),
-      // );
+    let chunkSetPayload: any;
+    let rawData: any;
 
-      socket.write(
-        JSON.stringify({
-          event: 'file_ack',
-          file: rawData,
-        }) + '\n', // ✅ VERY IMPORTANT
-      );
+    if (Platform.OS === 'ios') {
+      // ─── iOS: read the whole file into memory and pre-slice ───────────
+      console.log('iOS sender: loading file into memory…');
+      const fileData = await RNFS.readFile(normalizedPath, 'base64');
+      const buffer = Buffer.from(fileData, 'base64');
+
+      let offset = 0;
+      const chunkArray: Buffer[] = [];
+      while (offset < buffer.length) {
+        chunkArray.push(buffer.slice(offset, offset + CHUNK_SIZE));
+        offset += CHUNK_SIZE;
+      }
+
+      // rawData = {
+      //   // id: uuidv4(),
+      //   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      //   name: type === 'file' ? file?.name : file?.fileName,
+      //   size: type === 'file' ? file?.size : file?.fileSize,
+      //   mimeType: type === 'file' ? 'file' : '.jpg',
+      //   totalChunks: chunkArray.length,
+      // };
+      rawData = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name: type === 'file' ? file?.name : file?.fileName,
+        size: type === 'file' ? file?.size : file?.fileSize,
+        mimeType: getFileExtension(file),
+        totalChunks: chunkArray.length,
+      };
+
+      chunkSetPayload = {
+        id: rawData.id,
+        totalChunks: chunkArray.length,
+        chunkArray,
+      };
+    } else {
+      console.log('Android sender: streaming from disk…');
+
+      // Use the size already provided by the file picker if available
+      let fileSize = type === 'file' ? file?.size : file?.fileSize;
+      fileSize = Number(fileSize);
+
+      if (!fileSize || isNaN(fileSize)) {
+        try {
+          // Fallback to RNFS if size is completely missing
+          const stat = await RNFS.stat(normalizedPath);
+          fileSize = Number(stat.size);
+        } catch (err) {
+          console.error('Failed to stat file, ignoring to prevent crash:', err);
+          fileSize = 1; // Prevent NaN or divide by zero
+        }
+      }
+
+      const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
+
+      // rawData = {
+      //   // id: uuidv4(),
+      //   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      //   name: type === 'file' ? file?.name : file?.fileName,
+      //   size: type === 'file' ? file?.size : file?.fileSize,
+      //   mimeType: type === 'file' ? 'file' : '.jpg',
+      //   totalChunks,
+      // };
+      rawData = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name: type === 'file' ? file?.name : file?.fileName,
+        size: type === 'file' ? file?.size : file?.fileSize,
+        mimeType: getFileExtension(file),
+        totalChunks,
+      };
+      chunkSetPayload = {
+        id: rawData.id,
+        totalChunks,
+        chunkArray: [],
+        filePath: normalizedPath,
+        fileSize,
+        chunkSize: CHUNK_SIZE,
+      };
+    }
+
+    setSentFiles((prevData: any[]) => [
+      ...prevData,
+      { ...rawData, uri: file?.uri },
+    ]);
+
+    setCurrentChunkSet(chunkSetPayload);
+
+    try {
+      console.log('FILE ACKNOWLEDGE SENT ✅');
+      safeWrite(socket, JSON.stringify({ event: 'file_ack', file: rawData }) + '\n');
     } catch (error) {
       console.log('Error Sending File:', error);
     }
   };
+
   return (
     <TCPContext.Provider
       value={{

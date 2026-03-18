@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: screenWidth * 0.42,
+    maxWidth: 220,
     height: 130,
     borderRadius: 22,
     justifyContent: 'center',

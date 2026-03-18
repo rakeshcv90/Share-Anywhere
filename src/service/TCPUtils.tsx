@@ -1,16 +1,7 @@
-import { produce } from 'immer';
 import { Alert, Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
-import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
 
-type FileData = {
-  id: string;
-  name: string;
-  size: any;
-  mimeType: string;
-  totalChunks: number;
-};
 export const receiveFileAck = async (
   data: any,
   socket: any,
@@ -19,218 +10,160 @@ export const receiveFileAck = async (
   const { chunkStore, setChunkStore } = useChunkStore.getState();
 
   if (chunkStore) {
-    Alert.alert(
-      'Please wait',
-      'There are files which need to be received. Wait Bro!',
-    );
+    Alert.alert('Please wait', 'A file is already being received.');
     return;
   }
-  setReceivedFiles((prevData: any) =>
-    produce(prevData, (draft: any) => {
-      draft.push(data);
-    }),
-  );
+
+  // ✅ Update UI immediately BEFORE any async disk I/O
+  setReceivedFiles((prev: any[]) => [...prev, data]);
+
+  const basePath =
+    Platform.OS === 'ios'
+      ? RNFS.DocumentDirectoryPath
+      : RNFS.ExternalDirectoryPath;
+
+  const filePath = `${basePath}/.tmp_${data.name}`;
+
+  await RNFS.writeFile(filePath, '', 'utf8');
+
   setChunkStore({
-    id: data?.id,
-    totalChunks: data?.totalChunks,
-    name: data?.name,
-    size: data?.size,
-    mimeType: data?.mimeType,
+    id: data.id,
+    totalChunks: data.totalChunks,
+    name: data.name,
+    size: data.size,
+    mimeType: data.mimeType,
     chunkArray: [],
   });
-  if (!socket) {
-    console.log('Socket not available');
-    return;
-  }
 
-  try {
-    const basePath =
-      Platform.OS === 'ios'
-        ? RNFS.DocumentDirectoryPath
-        : RNFS.ExternalDirectoryPath;
+  if (!socket) return;
 
-    const filePath = `${basePath}/${data.name}`;
-
-    // create empty file before streaming chunks
-    await RNFS.writeFile(filePath, '', 'utf8');
-
-    // -----------------------------------------
-    await new Promise((resolve: any) => setTimeout(resolve, 10));
-    console.log('FILE RECEIVED 📦');
-    // socket.write(
-    //   JSON.stringify({
-    //     event: 'send_chunk_ack',
-    //     chunkNo: 0,
-    //   }),
-    // );
-    socket.write(
-      JSON.stringify({
-        event: 'send_chunk_ack',
-        chunkNo: 0,
-      }) + '\n',
-    );
-
-    console.log('REQUESTED FOR FIRST CHUNK 🔵');
-  } catch (error) {}
+  socket.write(
+    JSON.stringify({
+      event: 'send_chunk_ack',
+      chunkNo: 0,
+      windowSize: 256,
+    }) + '\n',
+  );
 };
+
+/* ---------------------------------------------------- */
+/* SEND CHUNK WINDOW                                     */
+/* ---------------------------------------------------- */
 
 export const sendChunkAck = async (
-  chunkIndex: any,
+  startChunkIndex: number,
+  windowSize: number,
   socket: any,
-  setTotalSentBytes: React.Dispatch<React.SetStateAction<number>>,
+  setTotalSentBytes: any,
   setSentFiles: any,
 ) => {
-  try {
-    const { currentChunkSet, resetCurrentChunkSet } = useChunkStore.getState();
-    if (!currentChunkSet) {
-      Alert.alert('There are no chunks to be sent');
-      return;
-    }
-    if (!socket) {
-      console.error('Socket not available');
-      return;
-    }
-    const totalChunks = currentChunkSet?.totalChunks;
-    if (!currentChunkSet.chunkArray[chunkIndex]) {
-      console.error(`Chunk at index ${chunkIndex} does not exist`);
-      return;
-    }
-    try {
-      // await new Promise((resolve: any) => setTimeout(resolve, 10));
-      await new Promise(resolve => setImmediate(resolve));
+  const { currentChunkSet, resetCurrentChunkSet } = useChunkStore.getState();
 
-      socket.write(
-        JSON.stringify({
-          event: 'receive_chunk_ack',
-          chunk: currentChunkSet?.chunkArray[chunkIndex].toString('base64'),
-          chunkNo: chunkIndex,
-        }) + '\n',
-      );
-      setTotalSentBytes(
-        (prev: any) => prev + currentChunkSet?.chunkArray[chunkIndex]?.length,
-      );
-      // if (chunkIndex + 2 > totalChunks) {
-      if (chunkIndex + 1 === totalChunks) {
-        console.log('ALL CHUNKS SENT SUCCESSFULLY ✅ 🔴');
-        setSentFiles((prevFiles: any) =>
-          produce(prevFiles, (draftFiles: any) => {
-            const fileIndex = draftFiles?.findIndex(
-              (f: any) => f.id === currentChunkSet.id,
-            );
-            if (fileIndex !== -1) {
-              draftFiles[fileIndex].available = true;
-            }
-          }),
-        );
-        resetCurrentChunkSet();
-      }
-    } catch (error) {
-      console.error('Error Sending File:', error);
+  if (!currentChunkSet) return;
+
+  const { totalChunks } = currentChunkSet;
+
+  const end = Math.min(startChunkIndex + windowSize, totalChunks);
+
+  for (let chunkIndex = startChunkIndex; chunkIndex < end; chunkIndex++) {
+    // Yield to the UI thread every 2 chunks (since chunks are now 256KB, 4x larger)
+    // the app responsive without adding excessive delay.
+    if (chunkIndex % 2 === 0) {
+      await new Promise<void>(resolve => setImmediate(() => resolve()));
     }
-  } catch (error) {
-    console.error('sendChunkAck error:', error);
+
+    let base64Chunk = '';
+    let byteLength = 0;
+
+    if (currentChunkSet.filePath) {
+      const { filePath, chunkSize } = currentChunkSet as any;
+
+      const position = chunkIndex * chunkSize;
+
+      base64Chunk = await RNFS.read(filePath, chunkSize, position, 'base64');
+
+      byteLength = (base64Chunk.length * 3) / 4;
+    } else {
+      const chunkBuf = currentChunkSet.chunkArray[chunkIndex];
+
+      if (!chunkBuf) continue;
+
+      base64Chunk = chunkBuf.toString('base64');
+
+      byteLength = chunkBuf.length;
+    }
+
+    const packet = `{"event":"receive_chunk_ack","chunk":"${base64Chunk}","chunkNo":${chunkIndex},"windowSize":${windowSize}}\n`;
+
+    socket.write(packet);
+
+    setTotalSentBytes((prev: any) => prev + byteLength);
+
+    if (chunkIndex + 1 === totalChunks) {
+      console.log('ALL CHUNKS SENT SUCCESSFULLY ✅');
+
+      setSentFiles((prev: any[]) =>
+        prev.map(file =>
+          file.id === currentChunkSet.id ? { ...file, available: true } : file,
+        ),
+      );
+
+      resetCurrentChunkSet();
+    }
   }
 };
+
+/* ---------------------------------------------------- */
+/* RECEIVE CHUNK                                         */
+/* ---------------------------------------------------- */
 
 export const receiveChunkAck = async (
   chunk: string,
   chunkNo: number,
   socket: any,
-  setTotalReceivedBytes: React.Dispatch<React.SetStateAction<number>>,
+  setTotalReceivedBytes: any,
   generateFile: () => Promise<void>,
+  windowSize: number,
 ) => {
   const { chunkStore } = useChunkStore.getState();
+
   if (!chunkStore) return;
 
-  try {
-    const bufferChunk = Buffer.from(chunk, 'base64');
+  const basePath =
+    Platform.OS === 'ios'
+      ? RNFS.DocumentDirectoryPath
+      : RNFS.ExternalDirectoryPath;
 
-    // ✅ STREAM WRITE INSTEAD OF MEMORY STORE
-    const basePath =
-      Platform.OS === 'ios'
-        ? RNFS.DocumentDirectoryPath
-        : RNFS.ExternalDirectoryPath;
+  const filePath = `${basePath}/.tmp_${chunkStore.name}`;
+  const byteLength = (chunk.length * 3) / 4;
+  const isLastChunk = chunkNo === chunkStore.totalChunks - 1;
 
-    const filePath = `${basePath}/${chunkStore.name}`;
+  // Write each chunk individually — DO NOT batch-join base64 strings.
+  // 64KB chunks encode with == padding at the end (65536 % 3 ≠ 0).
+  // Joining "abc==" + "def==" → "abc==def==" is INVALID base64 and
+  // corrupts the file. Each appendFile call decodes its chunk correctly.
+  await RNFS.appendFile(filePath, chunk, 'base64');
 
-    await RNFS.appendFile(filePath, bufferChunk.toString('base64'), 'base64');
+  setTotalReceivedBytes((prev: any) => prev + byteLength);
 
-    setTotalReceivedBytes(prev => prev + bufferChunk.length);
+  if (isLastChunk) {
+    console.log('STREAM COMPLETE ✅');
+    await generateFile();
+    return;
+  }
 
-    if (chunkNo + 1 === chunkStore.totalChunks) {
-      console.log('STREAM COMPLETE ✅');
-      await generateFile(); // just mark available now
-      return;
-    }
+  const nextChunkNo = chunkNo + 1;
 
-    await new Promise(resolve => setImmediate(resolve));
+  // Only request next window at real window boundaries.
+  const isWindowEnd = nextChunkNo % windowSize === 0;
 
+  if (isWindowEnd) {
     socket.write(
       JSON.stringify({
         event: 'send_chunk_ack',
-        chunkNo: chunkNo + 1,
+        chunkNo: nextChunkNo,
+        windowSize,
       }) + '\n',
     );
-  } catch (error) {
-    console.error('Streaming write error:', error);
   }
 };
-
-// export const receiveChunkAck = async (
-//   chunk: string,
-//   chunkNo: number,
-//   socket: any,
-//   setTotalReceivedBytes: React.Dispatch<React.SetStateAction<number>>,
-//   generateFile: () => Promise<void>,
-// ) => {
-//   const { chunkStore, setChunkStore } = useChunkStore.getState();
-
-//   if (!chunkStore) {
-//     console.log('Chunk Store is null');
-//     return;
-//   }
-
-//   try {
-//     // Convert base64 chunk to buffer
-//     const bufferChunk = Buffer.from(chunk, 'base64');
-//     const updatedChunkArray = [...(chunkStore.chunkArray || [])];
-//     updatedChunkArray[chunkNo] = bufferChunk;
-
-//     // Update chunk store
-//     setChunkStore({
-//       ...chunkStore,
-//       chunkArray: updatedChunkArray,
-//     });
-
-//     // Update total received bytes
-//     setTotalReceivedBytes(prev => prev + bufferChunk.length);
-
-//     // If all chunks received, generate the file
-//     if (chunkNo + 1 === chunkStore.totalChunks) {
-//       console.log('All Chunks Received ✅ 🔴');
-//       await generateFile();
-//       // resetChunkStore();
-//       return;
-//     }
-
-//     if (!socket) {
-//       console.log('Socket not available');
-//       return;
-//     }
-
-//     // Request next chunk
-//     // await new Promise(resolve => setTimeout(resolve, 10));
-
-//     await new Promise(resolve => setImmediate(resolve));
-
-//     console.log('REQUESTED FOR NEXT CHUNK ⬇️', chunkNo + 1);
-//     socket.write(
-//       JSON.stringify({
-//         event: 'send_chunk_ack',
-//         chunkNo: chunkNo + 1,
-//       })+ '\n',
-//     );
-//   } catch (error) {
-//     console.error('Error processing received chunk:', error);
-//   }
-// };

@@ -49,6 +49,7 @@ const featureCards = [
     bg: '#FBE9E7',
   },
 ];
+const isTablet = Dimensions.get('window').width > 600;
 
 const Misc = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -131,14 +132,14 @@ const Misc = () => {
             Discover
           </CustomeText>
         </View>
-        <TouchableOpacity>
+        {/* <TouchableOpacity>
           <Icon
             name="chevron-down"
             iconFamily="Ionicons"
             color="#0072FF"
             size={22}
           />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Carousel */}
@@ -229,31 +230,30 @@ const Misc = () => {
           </Animated.View>
         ))}
       </View>
-
-
       <TouchableOpacity
-        style={styles.startBtnAlt}
-        onPress={() => navigate('SendScreen')}
         activeOpacity={0.85}
+        onPress={() => navigate('SendScreen')}
+        style={styles.startBtnModern}
       >
         <LinearGradient
           colors={['#0072FF', '#42D5FC']}
-          style={styles.btnGradientAlt}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
+          style={styles.btnGradientModern}
         >
-          <CustomeText fontSize={15} fontFamily="Okra-Bold" color="#fff">
-            Start Sharing Now
-          </CustomeText>
+          {/* CENTER TEXT */}
+          <CustomeText style={styles.btnText}>Start Sharing Now</CustomeText>
+
+          {/* RIGHT ARROW */}
+          <View style={styles.btnArrowAlt}>
+            <Icon
+              name="arrow-forward"
+              iconFamily="Ionicons"
+              size={18}
+              color="#0072FF"
+            />
+          </View>
         </LinearGradient>
-        <View style={styles.btnArrowAlt}>
-          <Icon
-            name="arrow-forward"
-            iconFamily="Ionicons"
-            size={18}
-            color="#0072FF"
-          />
-        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -344,80 +344,69 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  startBtnModern: {
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
+    height: isTablet ? 70 : 45,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginTop: 10,
 
-  // startBtn: {
-  //   borderRadius: 16,
-  //   overflow: 'hidden',
-  //   marginBottom: 12,
-  //   shadowColor: '#0072FF',
-  //   shadowOffset: { width: 0, height: 4 },
-  //   shadowOpacity: 0.25,
-  //   shadowRadius: 10,
-  //   elevation: 8,
-  //   width:'100%',
-  //   height:50,
-  // },
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0072FF',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.25,
+        shadowRadius: 14,
+      },
+      android: {
+        elevation: 8,
+      },
+    }),
+  },
 
-  // btnGradient: {
-  //   flexDirection: 'row',
-  //   alignItems: 'center',
-  //   justifyContent: 'center',
-  //   paddingVertical: 1,
-  //   gap: 8,
-  // },
+  btnGradientModern: {
+    flex: 1,
+    justifyContent: 'center',
+    borderRadius: 20,
+  },
 
-  // btnArrow: {
-  //   width: 26,
-  //   height: 26,
-  //   borderRadius: 13,
-  //   backgroundColor: '#fff',
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  // },
+  // ⭐ PERFECT CENTER TEXT
+  btnText: {
+    position: 'absolute',
+    alignSelf: 'center',
+    color: '#fff',
+    fontSize: isTablet ? 36 : 20,
+    fontFamily: 'Okra-Bold',
+  },
 
-  // footer: {
-  //   alignItems: 'center',
-  // },
+  // ⭐ ALWAYS INSIDE BUTTON
+  btnArrowAlt: {
+    position: 'absolute',
+    right: 14,
+    top: isTablet ? '40%' : '50%',
+    transform: [{ translateY: -15 }],
 
-  startBtnAlt: {
-  width: '100%',
-  height: 50,
-  marginBottom: 12,
-  position: 'relative',
-  borderRadius: 16,
-  overflow: 'hidden',
-},
+    width: isTablet ? 50 : 30,
+    height: isTablet ? 50 : 30,
+    borderRadius: isTablet ? 25 : 15,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
 
-btnGradientAlt: {
-  width: '100%',
-  height: '100%',
-  justifyContent: 'center',
-  alignItems: 'center',
-  borderRadius: 16,
-},
-
-btnArrowAlt: {
-  position: 'absolute',
-  right: 50,
-  top: 12,
-  width: 26,
-  height: 26,
-  borderRadius: 13,
-  backgroundColor: '#fff',
-  justifyContent: 'center',
-  alignItems: 'center',
-  ...Platform.select({
-    ios: {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
-    android: {
-      elevation: 2,
-    },
-  }),
-},
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
 });
 
 export default Misc;

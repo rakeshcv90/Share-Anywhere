@@ -36,6 +36,38 @@ export const pickImage = (onMediaPickedUp: MediaPickedCallback) => {
     },
   );
 };
+export const pickVideo = (onMediaPickedUp: MediaPickedCallback) => {
+  launchImageLibrary(
+    {
+      mediaType: 'video',
+      quality: 1,
+      selectionLimit: 1,
+    },
+    response => {
+      if (response.didCancel) return;
+
+      if (response.errorCode) {
+        console.log('VideoPicker Error:', response.errorMessage);
+        return;
+      }
+
+      const asset = response.assets?.[0];
+      if (asset) onMediaPickedUp(asset);
+    },
+  );
+};
+
+export const pickAudio = async (onFilePickedUp: FilePickedCallback) => {
+  try {
+    const [file] = await pick({
+      type: ['audio/*'],
+    });
+
+    onFilePickedUp(file);
+  } catch (err) {
+    console.log('Audio pick error:', err);
+  }
+};
 
 export const pickDocument = async (onFilePickedUp: FilePickedCallback) => {
   try {

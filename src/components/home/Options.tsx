@@ -4,7 +4,13 @@ import Icon from '../global/Icon';
 import CustomeText from '../global/CustomeText';
 import { useTCP } from '../../service/TCPProvider';
 import { navigate } from '../../utils/NavigationUtil';
-import { pickDocument, pickImage } from '../../utils/libraryHelpers';
+import {
+  pickDocument,
+  pickImage,
+  pickVideo,
+  pickAudio,
+} from '../../utils/libraryHelpers';
+import { Colors } from '../../utils/Constants';
 
 type OptionsProps = {
   isHome?: boolean;
@@ -53,7 +59,9 @@ const Options: React.FC<OptionsProps> = ({
   onMediaPickedUp,
 }) => {
   const { isConnected } = useTCP();
-  const animations = useRef(optionData.map(() => new Animated.Value(0))).current;
+  const animations = useRef(
+    optionData.map(() => new Animated.Value(0)),
+  ).current;
 
   useEffect(() => {
     Animated.stagger(
@@ -70,6 +78,7 @@ const Options: React.FC<OptionsProps> = ({
   }, []);
 
   const handleUniversalPicker = async (type: string) => {
+    console.log('Option selected:', type);
     if (isHome) {
       if (isConnected) {
         navigate('ConnectionScreen');
@@ -89,21 +98,29 @@ const Options: React.FC<OptionsProps> = ({
         break;
       case 'video':
         if (onMediaPickedUp) {
-          pickImage((media: any) => {
+          pickVideo((media: any) => {
             onMediaPickedUp({ ...media, type: 'video' });
           }, 'video');
         }
         break;
+
       case 'audio':
         if (onFilePickedUp) {
-          pickDocument(
-            (file: any) => {
-              onFilePickedUp({ ...file, type: 'audio' });
-            },
-            ['audio/*'],
-          );
+          pickAudio((file: any) => {
+            onFilePickedUp({ ...file, type: 'audio' });
+          });
         }
         break;
+      // case 'audio':
+      //   if (onFilePickedUp) {
+      //     pickDocument(
+      //       (file: any) => {
+      //         onFilePickedUp({ ...file, type: 'audio' });
+      //       },
+      //       ['audio/*'],
+      //     );
+      //   }
+      //   break;
       case 'file':
         if (onFilePickedUp) {
           pickDocument((file: any) => {
@@ -161,7 +178,10 @@ const Options: React.FC<OptionsProps> = ({
                   size={24}
                 />
               </View>
-              <CustomeText style={styles.label} fontFamily="Okra-Medium">
+              <CustomeText
+                style={[styles.label, { color: isHome ? '#000' : '#fff' }]}
+                fontFamily="Okra-Medium"
+              >
                 {item.label}
               </CustomeText>
             </TouchableOpacity>
@@ -190,17 +210,17 @@ const styles = StyleSheet.create({
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 0.8,
-    borderColor: 'rgba(0,0,0,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
 
   sectionTitle: {
-    color: '#9CA3AF',
+    color: 'rgba(255,255,255,0.55)',
     letterSpacing: 2,
   },
 
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-evenly',
   },
 
   card: {
@@ -216,7 +236,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 4,
   },
@@ -225,7 +245,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     textAlign: 'center',
-    color: '#4A5568',
+    color: '#000',
   },
 });
 

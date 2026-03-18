@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Share App</string>
+	<string>Share Anywhere</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,6 +24,10 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSApplicationQueriesSchemes</key>
+    <array>
+  <string>itms-apps</string>
+</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -37,29 +41,25 @@
 	<array>
 		<string>_tcp._tcp</string>
 	</array>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Your app needs access to documenta to save files</string>
-	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
-	<string>Your app needs access to documenta to save files</string>
-	<key>NSCameraUsageDescription</key>
-	<string>$(PRODUCT_NAME) needs access to your Camera.</string>
-	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Your app needs access to documenta to save files</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Allow so that you can connect to nearby devices</string>
-  <key>NSLocationWhenInUseUsageDescription</key>
-  <string>This app requires location access to provide better service and improve user experience.</string>
 
-	<key>NSMicrophoneUsageDescription</key>
-	<string>$(PRODUCT_NAME) needs access to your microphone to record audio.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>$(PRODUCT_NAME) needs access to save photos and videos.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Share Anywhere uses your camera to scan QR codes to connect with nearby devices and to capture photos or videos you want to share. For example, you can scan a QR code displayed on another device to instantly establish a peer-to-peer connection for file sharing.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Share Anywhere accesses your Documents folder to let you select files to share with nearby devices and to save files received from others. For example, you can pick a PDF from your Documents folder and send it wirelessly to a nearby contact.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Share Anywhere uses your local network to discover and connect to nearby devices for direct peer-to-peer file sharing without the internet. For example, it finds other phones on the same Wi-Fi network so you can instantly send photos, videos, or documents to them.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Share Anywhere saves photos and videos received from nearby devices directly to your photo library. For example, when a contact sends you an image over a peer-to-peer connection, it will be saved to your Photos app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>$(PRODUCT_NAME) needs access to your photo library to select and share files.</string>
+    <string>Share Anywhere accesses your photo library so you can select photos and videos to share wirelessly with nearby devices. For example, you can pick multiple photos and send them to a friend's device without using mobile data or the internet.</string>
+    <key>NSAppleMusicUsageDescription</key>
+    <string>Share Anywhere needs access to your Apple Music and media library to allow you to select and securely transfer audio files to nearby devices.</string>
+
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Share Anywhere uses location services to help discover nearby devices on the same network for fast file sharing.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
-  <key>NSAppleMusicUsageDescription</key>
-  <string>This app requires access to your media library to function properly.</string>
+
 	<key>UIAppFonts</key>
 	<array>
 		<string>Okra-Medium.ttf</string>
