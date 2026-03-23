@@ -51,6 +51,8 @@ const ReceivedFileScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlideAnim = useRef(new Animated.Value(-50)).current;
@@ -243,9 +245,14 @@ const ReceivedFileScreen = () => {
   };
 
   const deleteFile = async file => {
+    const filesToDelete = Array.isArray(file) ? file : [file];
+    const isMultiple = filesToDelete.length > 1;
+
     Alert.alert(
-      'Delete File',
-      `Are you sure you want to delete "${file.name}"?`,
+      isMultiple ? 'Delete Files' : 'Delete File',
+      isMultiple
+        ? `Are you sure you want to delete ${filesToDelete.length} files?`
+        : `Are you sure you want to delete "${filesToDelete[0].name}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -253,11 +260,17 @@ const ReceivedFileScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await RNFS.unlink(file.uri);
+              for (const f of filesToDelete) {
+                await RNFS.unlink(f.uri);
+              }
+              if (isMultiple) {
+                setIsSelectionMode(false);
+                setSelectedFiles([]);
+              }
               getFilesFromDirectory(); // Refresh list
             } catch (error) {
               console.log('Delete Error:', error);
-              Alert.alert('Error', 'Could not delete file');
+              Alert.alert('Error', 'Could not delete file(s)');
             }
           },
         },
@@ -267,54 +280,67 @@ const ReceivedFileScreen = () => {
 
   const shareFile = async file => {
     try {
-      if (!file || !file.uri) {
-        Alert.alert('Error', 'File path is missing');
-        return;
+      const filesToShare = Array.isArray(file) ? file : [file];
+      if (filesToShare.length === 0) return;
+
+      const results = [];
+      for (const f of filesToShare) {
+        if (!f || !f.uri) continue;
+        const exists = await RNFS.exists(f.uri);
+        if (exists) {
+          const path = f.uri.startsWith('file://') ? f.uri : `file://${f.uri}`;
+          results.push(path);
+        }
       }
 
-      const fileExists = await RNFS.exists(file.uri);
-      if (!fileExists) {
-        Alert.alert('Error', 'File does not exist on disk');
+      if (results.length === 0) {
+        Alert.alert('Error', 'No valid files to share');
         return;
       }
-
-      // Ensure path has file:// scheme for local files
-      const path = file.uri.startsWith('file://')
-        ? file.uri
-        : `file://${file.uri}`;
-      const extension = file.name?.split('.').pop().toLowerCase() || '';
-
-      let mime = '*/*';
-      if (['jpg', 'jpeg', 'png', 'gif'].includes(extension))
-        mime = 'image/' + (extension === 'jpg' ? 'jpeg' : extension);
-      else if (['mp4', 'mov', 'avi'].includes(extension)) mime = 'video/mp4';
-      else if (['mp3', 'wav', 'm4a'].includes(extension)) mime = 'audio/mpeg';
-      else if (extension === 'pdf') mime = 'application/pdf';
-
-      console.log('Attempting share:', { path, mime, name: file.name });
 
       const shareOptions = {
-        title: file.name || 'Share File',
-        message: `Sharing ${file.name}`,
-        url: path, // Switched back to singular 'url' for broader compatibility
-        type: mime,
+        title: 'Share Files',
+        urls: results, // Use 'urls' for multiple files
         failOnCancel: false,
-        useInternalProvider: true, // Force use of the library's internal provider
       };
 
       await Share.open(shareOptions);
+      if (filesToShare.length > 1) {
+        setIsSelectionMode(false);
+        setSelectedFiles([]);
+      }
     } catch (error) {
       console.log('Share Error:', error);
-      if (
-        error &&
-        error.message &&
-        error.message.includes('User did not share')
-      ) {
-        return;
-      }
-      if (error?.message) {
+      if (error?.message && !error.message.includes('User did not share')) {
         Alert.alert('Share Error', error.message);
       }
+    }
+  };
+
+  const toggleSelection = fileId => {
+    setSelectedFiles(prev => {
+      if (prev.includes(fileId)) {
+        const next = prev.filter(id => id !== fileId);
+        if (next.length === 0) setIsSelectionMode(false);
+        return next;
+      } else {
+        return [...prev, fileId];
+      }
+    });
+  };
+
+  const handleLongPress = file => {
+    if (!isSelectionMode) {
+      setIsSelectionMode(true);
+      setSelectedFiles([file.id]);
+    }
+  };
+
+  const handlePress = file => {
+    if (isSelectionMode) {
+      toggleSelection(file.id);
+    } else {
+      openFile(file);
     }
   };
 
@@ -361,6 +387,8 @@ const ReceivedFileScreen = () => {
 
     const opacity = animValue;
 
+    const isSelected = selectedFiles.includes(item.id);
+
     return (
       <AnimatedCard
         style={{
@@ -368,7 +396,9 @@ const ReceivedFileScreen = () => {
           marginVertical: 8,
           padding: 16,
           borderRadius: 22,
-          backgroundColor: '#fff',
+          backgroundColor: isSelected ? '#EFF6FF' : '#fff',
+          borderWidth: isSelected ? 2 : 0,
+          borderColor: '#3B82F6',
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -382,7 +412,8 @@ const ReceivedFileScreen = () => {
           overflow: isIOS ? 'visible' : 'hidden',
         }}
         activeOpacity={0.8}
-        onPress={() => openFile(item)}
+        onPress={() => handlePress(item)}
+        onLongPress={() => handleLongPress(item)}
       >
         <View
           style={{
@@ -437,71 +468,97 @@ const ReceivedFileScreen = () => {
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity
-            onPress={() => shareFile(item)}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: '#F1F5F9',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 8,
-            }}
-          >
-            <Icon
-              name="share-outline"
-              iconFamily="Ionicons"
-              size={18}
-              color="#475569"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => deleteFile(item)}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: '#FEF2F2',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 8,
-            }}
-          >
-            <Icon
-              name="trash-outline"
-              iconFamily="Ionicons"
-              size={18}
-              color="#EF4444"
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => openFile(item)}>
-            <LinearGradient
-              colors={['#3B82F6', '#2563EB']}
+        {!isSelectionMode && (
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => shareFile(item)}
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: 19,
+                backgroundColor: '#F1F5F9',
                 justifyContent: 'center',
                 alignItems: 'center',
-                shadowColor: '#3B82F6',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 6,
+                marginRight: 8,
               }}
             >
               <Icon
-                name="eye-outline"
+                name="share-outline"
                 iconFamily="Ionicons"
                 size={18}
-                color="#fff"
+                color="#475569"
               />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => deleteFile(item)}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: '#FEF2F2',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 8,
+              }}
+            >
+              <Icon
+                name="trash-outline"
+                iconFamily="Ionicons"
+                size={18}
+                color="#EF4444"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => openFile(item)}>
+              <LinearGradient
+                colors={['#3B82F6', '#2563EB']}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: '#3B82F6',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                }}
+              >
+                <Icon
+                  name="eye-outline"
+                  iconFamily="Ionicons"
+                  size={18}
+                  color="#fff"
+                />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isSelectionMode && (
+          <View
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: 12,
+              borderWidth: 2,
+              borderColor: isSelected ? '#3B82F6' : '#CBD5E1',
+              backgroundColor: isSelected ? '#3B82F6' : 'transparent',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            {isSelected && (
+              <Icon
+                name="checkmark"
+                size={16}
+                color="#fff"
+                iconFamily="Ionicons"
+              />
+            )}
+          </View>
+        )}
       </AnimatedCard>
     );
   };
@@ -752,7 +809,14 @@ const ReceivedFileScreen = () => {
             }}
           >
             <TouchableOpacity
-              onPress={goBack}
+              onPress={() => {
+                if (isSelectionMode) {
+                  setIsSelectionMode(false);
+                  setSelectedFiles([]);
+                } else {
+                  goBack();
+                }
+              }}
               style={{
                 width: 40,
                 height: 40,
@@ -764,16 +828,95 @@ const ReceivedFileScreen = () => {
               }}
             >
               <Icon
-                name="arrow-back"
+                name={isSelectionMode ? 'close' : 'arrow-back'}
                 iconFamily="Ionicons"
                 size={24}
                 color="#fff"
               />
             </TouchableOpacity>
             <CustomeText fontFamily="Okra-Bold" fontSize={26} color="#fff">
-              Inbox
+              {isSelectionMode ? `${selectedFiles.length} Selected` : 'Inbox'}
             </CustomeText>
           </Animated.View>
+
+          {isSelectionMode && (
+            <Animated.View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-evenly',
+                paddingVertical: 10,
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                marginHorizontal: 20,
+                borderRadius: 20,
+                marginBottom: 10,
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  const selectedItems = receivedFiles.filter(f =>
+                    selectedFiles.includes(f.id),
+                  );
+                  shareFile(selectedItems);
+                }}
+                style={{ alignItems: 'center' }}
+              >
+                <Icon
+                  name="share-outline"
+                  iconFamily="Ionicons"
+                  size={24}
+                  color="#fff"
+                />
+                <CustomeText fontSize={10} color="#fff">
+                  Share
+                </CustomeText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  const selectedItems = receivedFiles.filter(f =>
+                    selectedFiles.includes(f.id),
+                  );
+                  deleteFile(selectedItems);
+                }}
+                style={{ alignItems: 'center' }}
+              >
+                <Icon
+                  name="trash-outline"
+                  iconFamily="Ionicons"
+                  size={24}
+                  color="#EF4444"
+                />
+                <CustomeText fontSize={10} color="#EF4444">
+                  Delete
+                </CustomeText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (selectedFiles.length === filteredFiles.length) {
+                    setSelectedFiles([]);
+                    setIsSelectionMode(false);
+                  } else {
+                    setSelectedFiles(filteredFiles.map(f => f.id));
+                  }
+                }}
+                style={{ alignItems: 'center' }}
+              >
+                <Icon
+                  name="checkbox-outline"
+                  iconFamily="Ionicons"
+                  size={24}
+                  color="#fff"
+                />
+                <CustomeText fontSize={10} color="#fff">
+                  {selectedFiles.length === filteredFiles.length
+                    ? 'Deselect All'
+                    : 'Select All'}
+                </CustomeText>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
 
           {isLoading ? (
             <View

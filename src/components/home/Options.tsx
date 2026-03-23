@@ -91,40 +91,30 @@ const Options: React.FC<OptionsProps> = ({
     switch (type) {
       case 'image':
         if (onMediaPickedUp) {
-          pickImage((media: any) => {
-            onMediaPickedUp({ ...media, type: 'image' });
-          }, 'photo');
+          pickImage((media: any[]) => {
+            media.forEach(m => onMediaPickedUp({ ...m, type: 'image' }));
+          });
         }
         break;
       case 'video':
         if (onMediaPickedUp) {
-          pickVideo((media: any) => {
-            onMediaPickedUp({ ...media, type: 'video' });
-          }, 'video');
+          pickVideo((media: any[]) => {
+            media.forEach(m => onMediaPickedUp({ ...m, type: 'video' }));
+          });
         }
         break;
 
       case 'audio':
         if (onFilePickedUp) {
-          pickAudio((file: any) => {
-            onFilePickedUp({ ...file, type: 'audio' });
+          pickAudio((files: any[]) => {
+            files.forEach(f => onFilePickedUp({ ...f, type: 'audio' }));
           });
         }
         break;
-      // case 'audio':
-      //   if (onFilePickedUp) {
-      //     pickDocument(
-      //       (file: any) => {
-      //         onFilePickedUp({ ...file, type: 'audio' });
-      //       },
-      //       ['audio/*'],
-      //     );
-      //   }
-      //   break;
       case 'file':
         if (onFilePickedUp) {
-          pickDocument((file: any) => {
-            onFilePickedUp({ ...file, type: 'file' });
+          pickDocument((files: any[]) => {
+            files.forEach(f => onFilePickedUp({ ...f, type: 'file' }));
           });
         }
         break;

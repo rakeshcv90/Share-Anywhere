@@ -266,7 +266,9 @@ const QRScannerModal: React.FC<ModalProps> = ({ visible, onClose }) => {
   useEffect(() => {
     if (isConnected) {
       onClose();
-      navigate('ConnectionScreen');
+      setTimeout(() => {
+        navigate('ConnectionScreen');
+      }, 300);
     }
   }, [isConnected]);
 

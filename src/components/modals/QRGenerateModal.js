@@ -190,7 +190,9 @@ const QRGenerateModal = ({ visible, onClose }) => {
   useEffect(() => {
     if (isConnected) {
       onClose();
-      navigate('ConnectionScreen');
+      setTimeout(() => {
+        navigate('ConnectionScreen');
+      }, 300);
     }
   }, [isConnected]);
 

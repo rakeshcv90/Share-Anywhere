@@ -15,7 +15,13 @@ export const receiveFileAck = async (
   }
 
   // ✅ Update UI immediately BEFORE any async disk I/O
-  setReceivedFiles((prev: any[]) => [...prev, data]);
+  setReceivedFiles((prev: any[]) => {
+    const exists = prev.some(f => f.id === data.id);
+    if (exists) {
+      return prev.map(f => (f.id === data.id ? { ...f, ...data } : f));
+    }
+    return [...prev, data];
+  });
 
   const basePath =
     Platform.OS === 'ios'
@@ -80,7 +86,12 @@ export const sendChunkAck = async (
 
       const position = chunkIndex * chunkSize;
 
-      base64Chunk = await RNFS.read(filePath, chunkSize, position, 'base64');
+      try {
+        base64Chunk = await RNFS.read(filePath, chunkSize, position, 'base64');
+      } catch (err) {
+        console.log('Error reading chunk at position:', position, err);
+        continue; // Skip this chunk or handle error appropriately
+      }
 
       byteLength = (base64Chunk.length * 3) / 4;
     } else {
@@ -101,14 +112,6 @@ export const sendChunkAck = async (
 
     if (chunkIndex + 1 === totalChunks) {
       console.log('ALL CHUNKS SENT SUCCESSFULLY ✅');
-
-      setSentFiles((prev: any[]) =>
-        prev.map(file =>
-          file.id === currentChunkSet.id ? { ...file, available: true } : file,
-        ),
-      );
-
-      resetCurrentChunkSet();
     }
   }
 };

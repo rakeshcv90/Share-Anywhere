@@ -23,7 +23,7 @@ import LinearGradient from 'react-native-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-const FileItem = ({ item, index, isSent }) => {
+const FileItem = ({ item, index, isSent, activeFileId }) => {
   const itemAnim = useRef(new Animated.Value(0)).current;
   const itemDelay = index * 100;
 
@@ -237,7 +237,7 @@ const FileItem = ({ item, index, isSent }) => {
                 color="#475569"
                 style={{ marginLeft: 4 }}
               >
-                {isSent ? 'Transferring...' : 'Receiving...'}
+                {activeFileId === item.id ? (isSent ? 'Transferring...' : 'Receiving...') : 'Waiting...'}
               </CustomeText>
             </View>
           ) : !isSent ? (
@@ -309,6 +309,7 @@ const ConnectionScreen = () => {
     totalReceivedBytes,
     totalSentBytes,
     isConnected,
+    activeFileId,
   } = useTCP();
 
   const TABS = {
@@ -323,16 +324,21 @@ const ConnectionScreen = () => {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const headerScale = useRef(new Animated.Value(0.95)).current;
   const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
+  const prevReceivedLength = useRef(0);
   useEffect(() => {
-    if (receivedFiles?.length === 1) {
+    if (receivedFiles?.length > prevReceivedLength.current) {
       setActiveTab(TABS.RECEIVED);
     }
+    prevReceivedLength.current = receivedFiles?.length || 0;
   }, [receivedFiles]);
 
+  const prevSentLength = useRef(0);
   useEffect(() => {
-    if (sentFiles?.length === 1) {
+    console.log('SENT FILES UPDATED:', sentFiles?.length);
+    if (sentFiles?.length > prevSentLength.current) {
       setActiveTab(TABS.SENT);
     }
+    prevSentLength.current = sentFiles?.length || 0;
   }, [sentFiles]);
   useEffect(() => {
     // Entrance animations
@@ -393,7 +399,7 @@ const ConnectionScreen = () => {
   // Simplified renderItem now just returns the FileItem component
   const renderItem = ({ item, index }) =>
     console.log('Rendering file item:', item) || (
-      <FileItem item={item} index={index} isSent={activeTab === TABS.SENT} />
+      <FileItem item={item} index={index} isSent={activeTab === TABS.SENT} activeFileId={activeFileId} />
     );
 
   return (

@@ -4,21 +4,21 @@ import React, {
   useContext,
   useCallback,
   useState,
+  useRef,
+  useEffect,
   FC,
 } from 'react';
 import DeviceInfo from 'react-native-device-info';
 import TcpSocket from 'react-native-tcp-socket';
 import { Buffer } from 'buffer';
 import RNFS from 'react-native-fs';
-// import { produce } from 'immer';
-import { v4 as uuidv4 } from 'uuid';
 import { receiveChunkAck, receiveFileAck, sendChunkAck } from './TCPUtils';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
 
-// Larger chunks = fewer JSON packets = much faster throughput, but heavier individual frames
 const CHUNK_SIZE = 1024 * 256; // 256 KB per chunk
 const WINDOW_SIZE = 256;
+
 interface TCPContextType {
   server: any;
   client: any;
@@ -28,6 +28,7 @@ interface TCPContextType {
   receivedFiles: any;
   totalSentBytes: number;
   totalReceivedBytes: number;
+  activeFileId: string | null;
   startServer: (port: number) => void;
   connectToServer: (host: string, port: number, deviceName: string) => void;
   sendMessage: (message: any) => void;
@@ -57,51 +58,105 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   const [receivedFiles, setReceivedFiles] = useState<any[]>([]);
   const [totalSentBytes, setTotalSentBytes] = useState(0);
   const [totalReceivedBytes, setTotalReceivedBytes] = useState(0);
+  const [activeFileId, setActiveFileId] = useState<string | null>(null);
 
-  const { currentChunkSet, setCurrentChunkSet, setChunkStore } =
-    useChunkStore();
+  const {
+    currentChunkSet,
+    setCurrentChunkSet,
+    setChunkStore,
+    resetCurrentChunkSet,
+    resetChunkStore,
+  } = useChunkStore();
 
-  const disconnect = useCallback(() => {
-    if (client) {
-      client.removeAllListeners();
-      client.destroy();
+  const activeSocket = useRef<any>(null);
+
+  useEffect(() => {
+    activeSocket.current = client || serverSocket;
+  }, [client, serverSocket]);
+
+  const getSocket = useCallback(() => activeSocket.current, []);
+
+  const safeWrite = useCallback((socket: any, data: any) => {
+    if (!socket) return;
+    try {
+      socket.write(data);
+    } catch (error) {
+      console.log('Error writing to socket:', error);
+    }
+  }, []);
+
+  const sendMessage = useCallback(
+    (message: any) => {
+      const socket = getSocket();
+      if (!socket) return;
+      safeWrite(socket, `${JSON.stringify(message)}\n`);
+    },
+    [getSocket, safeWrite],
+  );
+
+  const generateFile = useCallback(async () => {
+    const { chunkStore, resetChunkStore: storeReset } =
+      useChunkStore.getState();
+    if (!chunkStore) return;
+
+    const basePath =
+      Platform.OS === 'ios'
+        ? RNFS.DocumentDirectoryPath
+        : RNFS.ExternalDirectoryPath;
+
+    const tempPath = `${basePath}/.tmp_${chunkStore.name}`;
+    const finalPath = `${basePath}/${chunkStore.name}`;
+
+    console.log('--- Finalizing file:', chunkStore.name);
+    try {
+      if (await RNFS.exists(tempPath)) {
+        await RNFS.moveFile(tempPath, finalPath);
+      }
+    } catch (e) {
+      console.log('Error finalizing file:', e);
     }
 
-    if (serverSocket) {
-      serverSocket.removeAllListeners();
-      serverSocket.destroy?.();
-    }
+    setReceivedFiles(prev =>
+      prev.map(file =>
+        file.id === chunkStore.id
+          ? { ...file, uri: finalPath, available: true }
+          : file,
+      ),
+    );
 
-    if (server) {
-      server.removeAllListeners?.();
-      server.close();
-    }
-
-    setClient(null);
-    setServer(null);
-    setServerSocket(null);
-    setIsConnected(false);
-    setConnectedDevice(null);
-    setSentFiles([]);
-    setReceivedFiles([]);
-    setTotalSentBytes(0);
-    setTotalReceivedBytes(0);
-    setCurrentChunkSet(null);
-    setChunkStore(null);
-  }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
+    const fileId = chunkStore.id;
+    storeReset();
+    setActiveFileId(null);
+    sendMessage({ event: 'file_completed', id: fileId });
+    console.log('--- File completed and signal sent.');
+  }, [sendMessage, setReceivedFiles]);
 
   const handlePacket = useCallback(
     (parsedData: any, socket: any) => {
+      console.log('--- TCP Event Received:', parsedData?.event);
+
       if (parsedData?.event === 'connect') {
         setIsConnected(true);
         setConnectedDevice(parsedData?.deviceName);
       }
 
+      if (parsedData.event === 'file_queued') {
+        console.log('--- Event: file_queued for:', parsedData.file?.name);
+        setReceivedFiles((prev: any[]) => {
+          const exists = prev.some(f => f.id === parsedData.file?.id);
+          if (exists) return prev;
+          return [...prev, parsedData.file];
+        });
+      }
+
       if (parsedData.event === 'file_ack') {
+        console.log('--- Event: file_ack for:', parsedData.file?.name);
+        setActiveFileId(parsedData.file?.id);
         receiveFileAck(parsedData.file, socket, setReceivedFiles);
       }
 
       if (parsedData.event === 'send_chunk_ack') {
+        console.log('--- Event: send_chunk_ack, chunkNo:', parsedData.chunkNo);
         sendChunkAck(
           parsedData.chunkNo,
           parsedData.windowSize ?? 1,
@@ -112,6 +167,12 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       }
 
       if (parsedData.event === 'receive_chunk_ack') {
+        if (parsedData.chunkNo % 20 === 0) {
+          console.log(
+            '--- Event: receive_chunk_ack, chunkNo:',
+            parsedData.chunkNo,
+          );
+        }
         receiveChunkAck(
           parsedData.chunk,
           parsedData.chunkNo,
@@ -121,9 +182,29 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           parsedData.windowSize ?? WINDOW_SIZE,
         );
       }
-    },
 
-    [],
+      if (parsedData.event === 'file_completed') {
+        console.log('--- Event: file_completed, id:', parsedData.id);
+        setSentFiles((prev: any[]) =>
+          prev.map(file =>
+            file.id === parsedData.id ? { ...file, available: true } : file,
+          ),
+        );
+        resetCurrentChunkSet();
+        setActiveFileId(null);
+      }
+    },
+    [
+      setIsConnected,
+      setConnectedDevice,
+      setReceivedFiles,
+      setTotalSentBytes,
+      setTotalReceivedBytes,
+      setActiveFileId,
+      generateFile,
+      setSentFiles,
+      resetCurrentChunkSet,
+    ],
   );
 
   const makeFramedReader = useCallback(
@@ -136,7 +217,6 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         chunks.push(str);
         if (!hasNewline && str.includes('\n')) hasNewline = true;
 
-        // Only pay the cost of join + split when we have at least one boundary
         if (!hasNewline) return;
 
         const combined = chunks.join('');
@@ -159,7 +239,6 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           }
         }
 
-        // Keep any incomplete tail for the next data event
         if (start < combined.length) {
           chunks.push(combined.slice(start));
         }
@@ -167,29 +246,23 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     },
     [handlePacket],
   );
+
   const startServer = useCallback(
     (port: number) => {
-      if (server) {
-        console.log('Server already running');
-        return;
-      }
+      if (server) return;
 
       const newServer = TcpSocket.createServer(socket => {
         console.log('Client connected');
         setServerSocket(socket);
 
         socket.setNoDelay(true);
-
         socket.setKeepAlive(true);
         socket.setTimeout(0);
         makeFramedReader(socket);
 
-        // ✅ FIX: Don't disconnect on close — just mark as disconnected.
         socket.on('close', () => {
-          console.log('Client disconnected');
           setIsConnected(false);
           setConnectedDevice(null);
-          // Cleanup partial transfers from the UI list
           setReceivedFiles(prev => prev.filter(f => f.available));
           setSentFiles(prev => prev.filter(f => f.available));
         });
@@ -208,21 +281,16 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         console.log(`Server running on ${address?.address}:${address?.port}`);
       });
 
-      newServer.on('error', error => {
-        console.log('Server error:', error);
-      });
+      newServer.on('error', error => console.log('Server error:', error));
 
       setServer(newServer);
     },
-    [server, makeFramedReader],
+    [server, makeFramedReader, setReceivedFiles, setSentFiles],
   );
 
   const connectToServer = useCallback(
     (host: string, port: number, deviceName: string) => {
-      if (client) {
-        console.log('Already connected');
-        return;
-      }
+      if (client) return;
 
       const newClient = TcpSocket.connect({ host, port }, () => {
         console.log('Connected to server');
@@ -230,7 +298,6 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         setConnectedDevice(deviceName);
 
         const myDeviceName = DeviceInfo.getDeviceNameSync();
-
         newClient.write(
           JSON.stringify({
             event: 'connect',
@@ -239,18 +306,15 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         );
       });
 
-      // newClient.setNoDelay(true);
       newClient.setNoDelay(true);
       newClient.setKeepAlive(true);
       newClient.setTimeout(0);
       makeFramedReader(newClient);
 
-      // ✅ FIX: Don't call disconnect() on close. Just update state.
       newClient.on('close', () => {
-        console.log('Disconnected from server');
         setIsConnected(false);
         setConnectedDevice(null);
-        setClient(null); // ← clear so next scan can reconnect
+        setClient(null);
         setReceivedFiles(prev => prev.filter(f => f.available));
         setSentFiles(prev => prev.filter(f => f.available));
       });
@@ -258,184 +322,180 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       newClient.on('error', err => {
         console.log('Client socket error:', err);
         setIsConnected(false);
-        setClient(null); // ← clear on error too so reconnect works
+        setClient(null);
         setReceivedFiles(prev => prev.filter(f => f.available));
         setSentFiles(prev => prev.filter(f => f.available));
       });
 
       setClient(newClient);
     },
-    [client, makeFramedReader],
+    [client, makeFramedReader, setReceivedFiles, setSentFiles],
   );
 
-  const generateFile = async () => {
-    const { chunkStore, resetChunkStore } = useChunkStore.getState();
-    if (!chunkStore) return;
-
-    const basePath =
-      Platform.OS === 'ios'
-        ? RNFS.DocumentDirectoryPath
-        : RNFS.ExternalDirectoryPath;
-
-    const tempPath = `${basePath}/.tmp_${chunkStore.name}`;
-    const finalPath = `${basePath}/${chunkStore.name}`;
-
-    try {
-      if (await RNFS.exists(tempPath)) {
-        await RNFS.moveFile(tempPath, finalPath);
-      }
-    } catch (e) {
-      console.log('Error finalizing file:', e);
+  const disconnect = useCallback(() => {
+    if (client) {
+      client.removeAllListeners();
+      client.destroy();
     }
+    if (serverSocket) {
+      serverSocket.removeAllListeners();
+      serverSocket.destroy?.();
+    }
+    if (server) {
+      server.removeAllListeners?.();
+      server.close();
+    }
+    setClient(null);
+    setServer(null);
+    setServerSocket(null);
+    setIsConnected(false);
+    setConnectedDevice(null);
+    setSentFiles([]);
+    setReceivedFiles([]);
+    setTotalSentBytes(0);
+    setTotalReceivedBytes(0);
+    setCurrentChunkSet(null);
+    setChunkStore(null);
+  }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
 
-    setReceivedFiles(prev =>
-      prev.map(file =>
-        file.id === chunkStore.id
-          ? { ...file, uri: finalPath, available: true }
-          : file,
-      ),
-    );
-    resetChunkStore();
-  };
-  const getSocket = () => client ?? serverSocket;
-  const safeWrite = useCallback(
-    (socket: any, data: any) => {
-      if (!socket) return;
-      if (!data || (typeof data === 'string' && data.trim() === '')) {
-         console.log('Skipping empty socket write');
-         return;
-      }
-      try {
-        socket.write(data);
-      } catch (err) {
-        console.log('Socket write error:', err);
-      }
-    },
-    [],
-  );
-
-  const sendMessage = useCallback(
-    (message: any) => {
-      if (!message || (typeof message === 'object' && Object.keys(message).length === 0)) {
-        console.log('Skipping empty message send');
-        return;
-      }
-      
-      const socket = getSocket();
-      if (!socket) return;
-
-      safeWrite(socket, `${JSON.stringify(message)}\n`);
-    },
-    [client, serverSocket, safeWrite],
-  );
-  const getFileExtension = (file: any) => {
+  const getFileExtension = useCallback((file: any) => {
     const name = file?.name || file?.fileName || '';
-
     if (name.includes('.')) {
-      return name.split('.').pop().toLowerCase();
+      return '.' + name.split('.').pop().toLowerCase();
     }
-
     if (file?.type?.includes('/')) {
-      return file.type.split('/').pop();
+      return '.' + file.type.split('/').pop();
     }
+    return '.bin';
+  }, []);
 
-    return file?.type || 'file';
-  };
-  const sendFileAck = async (
+  const sendQueue = useRef<any[]>([]);
+  const isProcessing = useRef(false);
+
+  useEffect(() => {
+    console.log(
+      '--- currentChunkSet changed to:',
+      currentChunkSet ? 'PAYLOAD' : 'NULL',
+    );
+    if (currentChunkSet === null) {
+      isProcessing.current = false;
+      setActiveFileId(null);
+      if (sendQueue.current.length > 0) {
+        processNextInQueue();
+      }
+    }
+  }, [currentChunkSet]);
+
+  const processNextInQueue = useCallback(() => {
+    if (sendQueue.current.length === 0 || isProcessing.current) return;
+
+    const nextItem = sendQueue.current.shift();
+    if (nextItem) {
+      console.log('--- Processing next from queue:', nextItem.name);
+      isProcessing.current = true;
+      processFile(nextItem);
+    }
+  }, []);
+
+  const sendFileAck = (
     file: any,
     type: 'image' | 'file' | 'video' | 'audio',
   ) => {
-    if (currentChunkSet !== null) {
-      Alert.alert('Wait for current file to be sent!');
+    if (!file?.uri) return;
+
+    const rawData = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      name:
+        type === 'file'
+          ? file?.name
+          : file?.fileName || file?.name || 'Unknown',
+      size:
+        type === 'file'
+          ? Number(file?.size)
+          : Number(file?.fileSize || file?.size || 0),
+      mimeType: getFileExtension(file),
+      type,
+      uri: file.uri,
+      available: false,
+    };
+
+    console.log('--- sendFileAck added to queue:', rawData.name);
+    // Safety check for NaN
+    if (isNaN(rawData.size)) {
+      rawData.size = 0;
+    }
+    setSentFiles((prev: any[]) => [...prev, rawData]);
+    sendQueue.current.push({ ...rawData, file });
+    sendMessage({ event: 'file_queued', file: rawData });
+
+    if (!isProcessing.current && currentChunkSet === null) {
+      processNextInQueue();
+    }
+  };
+
+  const processFile = async (item: any) => {
+    const { file, id, name, size, mimeType } = item;
+    const socket = getSocket();
+    if (!socket) {
+      isProcessing.current = false;
+      setActiveFileId(null);
+      processNextInQueue();
       return;
     }
 
-    if (!file?.uri) {
-      console.log('Invalid file object:', file);
-      Alert.alert('Invalid file selected');
-      return;
+    let currentFilePath = file?.uri;
+    if (Platform.OS === 'android' && currentFilePath?.startsWith('content://')) {
+      try {
+        const tempPath = `${RNFS.CachesDirectoryPath}/temp_${Date.now()}_${name}`;
+        console.log('Copying content URI to temp path:', tempPath);
+        await RNFS.copyFile(currentFilePath, tempPath);
+        currentFilePath = tempPath;
+      } catch (err) {
+        console.log('Error copying content URI:', err);
+      }
     }
 
     const normalizedPath =
-      Platform.OS === 'ios' ? file?.uri?.replace('file://', '') : file?.uri;
-    const socket = getSocket();
-    // const socket = client || serverSocket;
-    if (!socket) return;
+      Platform.OS === 'ios' ? currentFilePath?.replace('file://', '') : currentFilePath;
 
     let chunkSetPayload: any;
-    let rawData: any;
+    let rawDataForAck = { id, name, size, mimeType, totalChunks: 0 };
 
     if (Platform.OS === 'ios') {
-      // ─── iOS: read the whole file into memory and pre-slice ───────────
-      console.log('iOS sender: loading file into memory…');
-      const fileData = await RNFS.readFile(normalizedPath, 'base64');
-      const buffer = Buffer.from(fileData, 'base64');
-
-      let offset = 0;
-      const chunkArray: Buffer[] = [];
-      while (offset < buffer.length) {
-        chunkArray.push(buffer.slice(offset, offset + CHUNK_SIZE));
-        offset += CHUNK_SIZE;
+      try {
+        const fileData = await RNFS.readFile(normalizedPath, 'base64');
+        const buffer = Buffer.from(fileData, 'base64');
+        let offset = 0;
+        const chunkArray: Buffer[] = [];
+        while (offset < buffer.length) {
+          chunkArray.push(buffer.slice(offset, offset + CHUNK_SIZE));
+          offset += CHUNK_SIZE;
+        }
+        rawDataForAck.size = buffer.length;
+        rawDataForAck.totalChunks = chunkArray.length;
+        chunkSetPayload = { id, totalChunks: chunkArray.length, chunkArray };
+      } catch (err) {
+        console.log('iOS read error:', err);
+        isProcessing.current = false;
+        setActiveFileId(null);
+        processNextInQueue();
+        return;
       }
-
-      // rawData = {
-      //   // id: uuidv4(),
-      //   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      //   name: type === 'file' ? file?.name : file?.fileName,
-      //   size: type === 'file' ? file?.size : file?.fileSize,
-      //   mimeType: type === 'file' ? 'file' : '.jpg',
-      //   totalChunks: chunkArray.length,
-      // };
-      rawData = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-        name: type === 'file' ? file?.name : file?.fileName,
-        size: type === 'file' ? file?.size : file?.fileSize,
-        mimeType: getFileExtension(file),
-        totalChunks: chunkArray.length,
-      };
-
-      chunkSetPayload = {
-        id: rawData.id,
-        totalChunks: chunkArray.length,
-        chunkArray,
-      };
     } else {
-      console.log('Android sender: streaming from disk…');
-
-      // Use the size already provided by the file picker if available
-      let fileSize = type === 'file' ? file?.size : file?.fileSize;
-      fileSize = Number(fileSize);
-
+      let fileSize = Number(size);
       if (!fileSize || isNaN(fileSize)) {
         try {
-          // Fallback to RNFS if size is completely missing
           const stat = await RNFS.stat(normalizedPath);
           fileSize = Number(stat.size);
-        } catch (err) {
-          console.error('Failed to stat file, ignoring to prevent crash:', err);
-          fileSize = 1; // Prevent NaN or divide by zero
+        } catch {
+          fileSize = 1;
         }
       }
-
-      const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
-
-      // rawData = {
-      //   // id: uuidv4(),
-      //   id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      //   name: type === 'file' ? file?.name : file?.fileName,
-      //   size: type === 'file' ? file?.size : file?.fileSize,
-      //   mimeType: type === 'file' ? 'file' : '.jpg',
-      //   totalChunks,
-      // };
-      rawData = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-        name: type === 'file' ? file?.name : file?.fileName,
-        size: type === 'file' ? file?.size : file?.fileSize,
-        mimeType: getFileExtension(file),
-        totalChunks,
-      };
+      const totalChunks = Math.ceil(fileSize / CHUNK_SIZE) || 1;
+      rawDataForAck.size = fileSize;
+      rawDataForAck.totalChunks = totalChunks;
       chunkSetPayload = {
-        id: rawData.id,
+        id,
         totalChunks,
         chunkArray: [],
         filePath: normalizedPath,
@@ -444,18 +504,20 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       };
     }
 
-    setSentFiles((prevData: any[]) => [
-      ...prevData,
-      { ...rawData, uri: file?.uri },
-    ]);
-
     setCurrentChunkSet(chunkSetPayload);
+    setActiveFileId(id);
 
     try {
-      console.log('FILE ACKNOWLEDGE SENT ✅');
-      safeWrite(socket, JSON.stringify({ event: 'file_ack', file: rawData }) + '\n');
+      console.log('FILE ACKNOWLEDGE SENT ✅:', name);
+      safeWrite(
+        socket,
+        JSON.stringify({ event: 'file_ack', file: rawDataForAck }) + '\n',
+      );
     } catch (error) {
       console.log('Error Sending File:', error);
+      isProcessing.current = false;
+      setActiveFileId(null);
+      processNextInQueue();
     }
   };
 
@@ -464,17 +526,18 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       value={{
         server,
         client,
+        isConnected,
         connectedDevice,
         sentFiles,
         receivedFiles,
-        totalReceivedBytes,
         totalSentBytes,
-        isConnected,
+        totalReceivedBytes,
+        activeFileId,
         startServer,
         connectToServer,
-        disconnect,
         sendMessage,
         sendFileAck,
+        disconnect,
       }}
     >
       {children}

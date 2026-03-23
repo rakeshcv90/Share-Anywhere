@@ -14,12 +14,13 @@ import {
 type MediaPickedCallback = (media: Asset) => void;
 type FilePickedCallback = (file: any) => void;
 
-export const pickImage = (onMediaPickedUp: MediaPickedCallback) => {
+export const pickImage = (onMediaPickedUp: (media: Asset[]) => void) => {
   launchImageLibrary(
     {
       mediaType: 'photo',
       quality: 1,
       includeBase64: false,
+      selectionLimit: 0, // Allow multiple selection
     },
     (response: any) => {
       if (response.didCancel) {
@@ -29,19 +30,18 @@ export const pickImage = (onMediaPickedUp: MediaPickedCallback) => {
       } else {
         const {assets} = response;
         if (assets && assets.length > 0) {
-          const selectedImage = assets[0];
-          onMediaPickedUp(selectedImage);
+          onMediaPickedUp(assets);
         }
       }
     },
   );
 };
-export const pickVideo = (onMediaPickedUp: MediaPickedCallback) => {
+export const pickVideo = (onMediaPickedUp: (media: Asset[]) => void) => {
   launchImageLibrary(
     {
       mediaType: 'video',
       quality: 1,
-      selectionLimit: 1,
+      selectionLimit: 0, // Allow multiple selection
     },
     response => {
       if (response.didCancel) return;
@@ -51,28 +51,32 @@ export const pickVideo = (onMediaPickedUp: MediaPickedCallback) => {
         return;
       }
 
-      const asset = response.assets?.[0];
-      if (asset) onMediaPickedUp(asset);
+      const assets = response.assets;
+      if (assets && assets.length > 0) onMediaPickedUp(assets);
     },
   );
 };
 
-export const pickAudio = async (onFilePickedUp: FilePickedCallback) => {
+export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
   try {
-    const [file] = await pick({
-      type: ['audio/*'],
+    const files = await pick({
+      type: ['*/*', 'audio/*'],
+      allowMultiSelection: true,
     });
 
-    onFilePickedUp(file);
+    onFilePickedUp(files);
   } catch (err) {
     console.log('Audio pick error:', err);
   }
 };
 
-export const pickDocument = async (onFilePickedUp: FilePickedCallback) => {
+export const pickDocument = async (onFilePickedUp: (files: any[]) => void) => {
   try {
-    const [pickResult] = await pick();
-    onFilePickedUp(pickResult);
+    const pickResults = await pick({
+      allowMultiSelection: true,
+      type: ['*/*'],
+    });
+    onFilePickedUp(pickResults);
   } catch (err: unknown) {
     console.log(err);
   }
@@ -90,29 +94,7 @@ export const formatFileSize = (sizeInBytes: number): string => {
   }
 };
 
-// export const checkFilePermissions = async (platform: string) => {
-//   if (platform === 'android') {
-//     try {
-//       const granted = await PermissionsAndroid.requestMultiple([
-//         PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-//         PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-//       ]);
-//       if (
-//         granted['android.permission.READ_EXTERNAL_STORAGE'] &&
-//         granted['android.permission.WRITE_EXTERNAL_STORAGE']
-//       ) {
-//         console.log('STORAGE PERMISSION GRANTED ✅');
-//         return true;
-//       } else {
-//         return false;
-//       }
-//     } catch (err) {
-//       return false;
-//     }
-//   } else {
-//     return true;
-//   }
-// };
+
 
 export const checkFilePermissions = async (): Promise<boolean> => {
   try {
@@ -147,7 +129,7 @@ export const checkFilePermissions = async (): Promise<boolean> => {
     } else if (Platform.OS === 'ios') {
       const permission = PERMISSIONS.IOS.PHOTO_LIBRARY;
 
-      // Check current status first
+     
       const status = await check(permission);
 
       if (status === RESULTS.GRANTED) {

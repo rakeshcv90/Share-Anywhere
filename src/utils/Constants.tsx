@@ -7,24 +7,6 @@ import {
   check,
 } from 'react-native-permissions';
 
-// export const requestPhotoPermission = async () => {
-//   if (Platform.OS !== 'ios') {
-//     return
-//   }else{
-//   try {
-//     const result = await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
-//     if (result === RESULTS.GRANTED) {
-//       console.log('STORAGE PERMISSION GRANTED ✅');
-//     } else {
-//       console.log('STORAGE PERMISSION DENIED ❌');
-//     }
-//   } catch (error) {
-//     console.error('Error requesting permission:', error);
-//   }
-//   }
-
-// };
-
 export const requestPhotoPermission = async () => {
   try {
     let permission;
