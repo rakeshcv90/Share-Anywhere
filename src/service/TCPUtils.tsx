@@ -1,11 +1,15 @@
 import { Alert, Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
 import RNFS from 'react-native-fs';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Buffer } from 'buffer';
 
 export const receiveFileAck = async (
   data: any,
   socket: any,
   setReceivedFiles: any,
+  setActiveFileTotalSize: any,
+  setActiveFileTransferredBytes: any,
 ) => {
   const { chunkStore, setChunkStore } = useChunkStore.getState();
 
@@ -30,7 +34,12 @@ export const receiveFileAck = async (
 
   const filePath = `${basePath}/.tmp_${data.name}`;
 
-  await RNFS.writeFile(filePath, '', 'utf8');
+  // Use ReactNativeBlobUtil writeStream for high-performance sequential writing
+  const stream = await ReactNativeBlobUtil.fs.writeStream(
+    filePath,
+    'base64',
+    false,
+  );
 
   setChunkStore({
     id: data.id,
@@ -39,7 +48,10 @@ export const receiveFileAck = async (
     size: data.size,
     mimeType: data.mimeType,
     chunkArray: [],
+    stream: stream,
   });
+  setActiveFileTotalSize(data.size);
+  setActiveFileTransferredBytes(0);
 
   if (!socket) return;
 
@@ -47,78 +59,152 @@ export const receiveFileAck = async (
     JSON.stringify({
       event: 'send_chunk_ack',
       chunkNo: 0,
-      windowSize: 256,
+      windowSize: 64,
     }) + '\n',
   );
 };
 
-/* ---------------------------------------------------- */
-/* SEND CHUNK WINDOW                                     */
-/* ---------------------------------------------------- */
+// export const sendChunkAck = async (
+//   startChunkIndex: number,
+//   windowSize: number,
+//   socket: any,
+//   setTotalSentBytes: any,
+//   setSentFiles: any,
+//   setActiveFileTransferredBytes: any,
+// ) => {
+//   const { currentChunkSet, resetCurrentChunkSet } = useChunkStore.getState();
 
-export const sendChunkAck = async (
-  startChunkIndex: number,
-  windowSize: number,
-  socket: any,
-  setTotalSentBytes: any,
-  setSentFiles: any,
-) => {
-  const { currentChunkSet, resetCurrentChunkSet } = useChunkStore.getState();
+//   if (!currentChunkSet) return;
 
-  if (!currentChunkSet) return;
+//   const { totalChunks } = currentChunkSet;
 
-  const { totalChunks } = currentChunkSet;
+//   const { filePath, chunkSize } = currentChunkSet as any;
+//   const end = Math.min(startChunkIndex + windowSize, totalChunks);
+//   let accumulatedBytes = 0;
 
-  const end = Math.min(startChunkIndex + windowSize, totalChunks);
+//   // PIPELINING: Start reading the first chunk immediately
+//   let nextChunkPromise = RNFS.read(
+//     filePath,
+//     chunkSize,
+//     startChunkIndex * chunkSize,
+//     'base64',
+//   );
 
-  for (let chunkIndex = startChunkIndex; chunkIndex < end; chunkIndex++) {
-    // Yield to the UI thread every 2 chunks (since chunks are now 256KB, 4x larger)
-    // the app responsive without adding excessive delay.
-    if (chunkIndex % 2 === 0) {
-      await new Promise<void>(resolve => setImmediate(() => resolve()));
-    }
+//   for (let chunkIndex = startChunkIndex; chunkIndex < end; chunkIndex++) {
+//     try {
+//       // Yield once per window to keep UI thread alive
+//       if (chunkIndex % 4 === 0 && chunkIndex !== startChunkIndex) {
+//         await new Promise<void>(resolve => setImmediate(() => resolve()));
+//       }
 
-    let base64Chunk = '';
-    let byteLength = 0;
+//       const base64Chunk = await nextChunkPromise;
 
-    if (currentChunkSet.filePath) {
-      const { filePath, chunkSize } = currentChunkSet as any;
+//       // START READING THE NEXT CHUNK IMMEDIATELY (Parallel work)
+//       if (chunkIndex + 1 < end) {
+//         const nextPosition = (chunkIndex + 1) * chunkSize;
+//         nextChunkPromise = RNFS.read(
+//           filePath,
+//           chunkSize,
+//           nextPosition,
+//           'base64',
+//         );
+//       }
 
-      const position = chunkIndex * chunkSize;
+//       const packet =
+//         JSON.stringify({
+//           event: 'receive_chunk_ack',
+//           chunk: base64Chunk,
+//           chunkNo: chunkIndex,
+//           windowSize: windowSize,
+//         }) + '\n';
 
-      try {
-        base64Chunk = await RNFS.read(filePath, chunkSize, position, 'base64');
-      } catch (err) {
-        console.log('Error reading chunk at position:', position, err);
-        continue; // Skip this chunk or handle error appropriately
-      }
+//       socket.write(packet);
 
-      byteLength = (base64Chunk.length * 3) / 4;
-    } else {
-      const chunkBuf = currentChunkSet.chunkArray[chunkIndex];
+//       const byteLength = (base64Chunk.length * 3) / 4;
+//       accumulatedBytes += byteLength;
 
-      if (!chunkBuf) continue;
+//       if (
+//         chunkIndex % 8 === 0 ||
+//         chunkIndex + 1 === end ||
+//         chunkIndex + 1 === totalChunks
+//       ) {
+//         const toUpdate = accumulatedBytes;
+//         accumulatedBytes = 0;
+//         setTotalSentBytes((prev: any) => prev + toUpdate);
+//         setActiveFileTransferredBytes((prev: any) => prev + toUpdate);
+//       }
+//     } catch (err) {
+//       console.log('--- sendChunkAck Error:', err);
+//       break;
+//     }
+//   }
 
-      base64Chunk = chunkBuf.toString('base64');
+//   if (end === totalChunks) {
+//     console.log('ALL CHUNKS SENT SUCCESSFULLY ✅');
+//   }
+// };
 
-      byteLength = chunkBuf.length;
-    }
+// export const receiveChunkAck = async (
+//   chunk: string,
+//   chunkNo: number,
+//   socket: any,
+//   setTotalReceivedBytes: any,
+//   generateFile: () => Promise<void>,
+//   setActiveFileTransferredBytes: any,
+//   windowSize: number,
+// ) => {
+//   const { chunkStore } = useChunkStore.getState();
 
-    const packet = `{"event":"receive_chunk_ack","chunk":"${base64Chunk}","chunkNo":${chunkIndex},"windowSize":${windowSize}}\n`;
+//   if (!chunkStore) return;
 
-    socket.write(packet);
+//   const basePath =
+//     Platform.OS === 'ios'
+//       ? RNFS.DocumentDirectoryPath
+//       : RNFS.ExternalDirectoryPath;
 
-    setTotalSentBytes((prev: any) => prev + byteLength);
+//   const filePath = `${basePath}/.tmp_${chunkStore.name}`;
+//   const byteLength = (chunk.length * 3) / 4;
+//   const isLastChunk = chunkNo === chunkStore.totalChunks - 1;
 
-    if (chunkIndex + 1 === totalChunks) {
-      console.log('ALL CHUNKS SENT SUCCESSFULLY ✅');
-    }
-  }
-};
+//   // Write using high-performance stream if available
+//   if (chunkStore.stream) {
+//     await chunkStore.stream.write(chunk);
+//   } else {
+//     // Fallback to appendFile if stream isn't ready
+//     await RNFS.appendFile(filePath, chunk, 'base64');
+//   }
 
-/* ---------------------------------------------------- */
-/* RECEIVE CHUNK                                         */
-/* ---------------------------------------------------- */
+//   setTotalReceivedBytes((prev: any) => prev + byteLength);
+//   setActiveFileTransferredBytes((prev: any) => prev + byteLength);
+
+//   if (isLastChunk) {
+//     console.log('STREAM COMPLETE ✅');
+//     if (chunkStore.stream) {
+//       try {
+//         await chunkStore.stream.close();
+//       } catch (e) {
+//         console.log('Error closing stream:', e);
+//       }
+//     }
+//     await generateFile();
+//     return;
+//   }
+
+//   const nextChunkNo = chunkNo + 1;
+
+//   // Only request next window at real window boundaries.
+//   const isWindowEnd = nextChunkNo % windowSize === 0;
+
+//   if (isWindowEnd) {
+//     socket.write(
+//       JSON.stringify({
+//         event: 'send_chunk_ack',
+//         chunkNo: nextChunkNo,
+//         windowSize,
+//       }) + '\n',
+//     );
+//   }
+// };
 
 export const receiveChunkAck = async (
   chunk: string,
@@ -126,41 +212,38 @@ export const receiveChunkAck = async (
   socket: any,
   setTotalReceivedBytes: any,
   generateFile: () => Promise<void>,
+  setActiveFileTransferredBytes: any,
   windowSize: number,
 ) => {
   const { chunkStore } = useChunkStore.getState();
-
   if (!chunkStore) return;
 
-  const basePath =
-    Platform.OS === 'ios'
-      ? RNFS.DocumentDirectoryPath
-      : RNFS.ExternalDirectoryPath;
-
-  const filePath = `${basePath}/.tmp_${chunkStore.name}`;
   const byteLength = (chunk.length * 3) / 4;
   const isLastChunk = chunkNo === chunkStore.totalChunks - 1;
 
-  // Write each chunk individually — DO NOT batch-join base64 strings.
-  // 64KB chunks encode with == padding at the end (65536 % 3 ≠ 0).
-  // Joining "abc==" + "def==" → "abc==def==" is INVALID base64 and
-  // corrupts the file. Each appendFile call decodes its chunk correctly.
-  await RNFS.appendFile(filePath, chunk, 'base64');
+  // 🔥 DO NOT await every write (huge speed boost)
+  if (chunkStore.stream) {
+    chunkStore.stream.write(chunk);
+  }
 
   setTotalReceivedBytes((prev: any) => prev + byteLength);
+  setActiveFileTransferredBytes((prev: any) => prev + byteLength);
 
   if (isLastChunk) {
     console.log('STREAM COMPLETE ✅');
+
+    try {
+      await chunkStore.stream.close();
+    } catch (e) {}
+
     await generateFile();
     return;
   }
 
   const nextChunkNo = chunkNo + 1;
 
-  // Only request next window at real window boundaries.
-  const isWindowEnd = nextChunkNo % windowSize === 0;
-
-  if (isWindowEnd) {
+  // 🔥 Request next window ONLY occasionally
+  if (nextChunkNo % windowSize === 0) {
     socket.write(
       JSON.stringify({
         event: 'send_chunk_ack',
@@ -168,5 +251,59 @@ export const receiveChunkAck = async (
         windowSize,
       }) + '\n',
     );
+  }
+};
+
+export const sendChunkAck = async (
+  startChunkIndex: number,
+  windowSize: number,
+  socket: any,
+  setTotalSentBytes: any,
+  setSentFiles: any,
+  setActiveFileTransferredBytes: any,
+) => {
+  const { currentChunkSet } = useChunkStore.getState();
+  if (!currentChunkSet) return;
+
+  const { totalChunks, filePath, chunkSize } = currentChunkSet as any;
+
+  const end = Math.min(startChunkIndex + windowSize, totalChunks);
+
+  let accumulatedBytes = 0;
+
+  // 🔥 Preload multiple chunks (parallel read)
+  const readPromises: Promise<string>[] = [];
+
+  for (let i = startChunkIndex; i < end; i++) {
+    readPromises.push(RNFS.read(filePath, chunkSize, i * chunkSize, 'base64'));
+  }
+
+  const chunks = await Promise.all(readPromises);
+
+  // 🔥 Send ALL chunks without waiting
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkIndex = startChunkIndex + i;
+    const base64Chunk = chunks[i];
+
+    const packet =
+      JSON.stringify({
+        event: 'receive_chunk_ack',
+        chunk: base64Chunk,
+        chunkNo: chunkIndex,
+        windowSize,
+      }) + '\n';
+
+    socket.write(packet);
+
+    const byteLength = (base64Chunk.length * 3) / 4;
+    accumulatedBytes += byteLength;
+  }
+
+  // 🔥 Single UI update (VERY IMPORTANT)
+  setTotalSentBytes((prev: any) => prev + accumulatedBytes);
+  setActiveFileTransferredBytes((prev: any) => prev + accumulatedBytes);
+
+  if (end === totalChunks) {
+    console.log('ALL CHUNKS SENT SUCCESSFULLY ✅');
   }
 };

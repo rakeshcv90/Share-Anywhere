@@ -59,6 +59,9 @@ export const pickVideo = (onMediaPickedUp: (media: Asset[]) => void) => {
 
 export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
   try {
+    // Small delay to ensure Android activity state is stable
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     const files = await pick({
       type: ['*/*', 'audio/*'],
       allowMultiSelection: true,
@@ -72,6 +75,9 @@ export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
 
 export const pickDocument = async (onFilePickedUp: (files: any[]) => void) => {
   try {
+    // Small delay to ensure Android activity state is stable
+    await new Promise(resolve => setTimeout(resolve, 200));
+
     const pickResults = await pick({
       allowMultiSelection: true,
       type: ['*/*'],

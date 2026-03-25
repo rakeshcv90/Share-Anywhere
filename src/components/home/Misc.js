@@ -16,7 +16,7 @@ import Icon from '../global/Icon';
 const images = [
   require('../../assets/images/im1.png'),
   require('../../assets/images/im2.png'),
-  require('../../assets/icons/wild_robot.jpg'),
+  // require('../../assets/icons/wild_robot.jpg'),
   require('../../assets/icons/share_logo.jpg'),
 ];
 

@@ -17,12 +17,17 @@ import {
   RefreshControl,
   ScrollView,
   Alert,
+  Modal,
+  StyleSheet,
 } from 'react-native';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LinearGradient from 'react-native-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 import Icon from '../components/global/Icon';
 import CustomeText from '../components/global/CustomeText';
@@ -50,9 +55,17 @@ const ReceivedFileScreen = () => {
   const [receivedFiles, setReceivedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'warning',
+  });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerSlideAnim = useRef(new Animated.Value(-50)).current;
@@ -226,21 +239,47 @@ const ReceivedFileScreen = () => {
   };
 
   const openFile = file => {
-    const path = isIOS ? `file://${file.uri}` : file.uri;
-    const extension = file.mimeType?.toLowerCase();
+    if (!file || !file.uri) return;
 
+    let path = file.uri;
+    // Standardize to absolute path (strip various file:// prefixes)
+    if (path.startsWith('file://')) {
+      path = path.replace('file://', '');
+    } else if (path.startsWith('/file:/')) {
+      path = path.replace('/file:/', '');
+    } else if (path.startsWith('file:/')) {
+      path = path.replace('file:/', '');
+    }
+
+    // Ensure it's an absolute path and then prepend exactly file:///
+    if (!path.startsWith('/')) {
+      path = '/' + path;
+    }
+    const finalUri = `file://${path}`;
+
+    // Robust extension-to-mime detection (handle optional dot)
+    const ext = (file.mimeType?.toLowerCase() || '').replace('.', '');
     let mime = '*/*';
-    if (['jpg', 'jpeg', 'png'].includes(extension))
-      mime = 'image/' + (extension === 'jpg' ? 'jpeg' : extension);
-    if (['mp4', 'mov'].includes(extension)) mime = 'video/mp4';
-    if (['mp3', 'wav'].includes(extension)) mime = 'audio/mpeg';
+    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+      mime = 'image/' + (ext === 'jpg' ? 'jpeg' : ext);
+    } else if (['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(ext)) {
+      mime = 'video/' + (ext === 'mov' ? 'quicktime' : (ext === 'mkv' ? 'x-matroska' : 'mp4'));
+    } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext)) {
+      mime = 'audio/mpeg';
+    } else if (ext === 'pdf') {
+       mime = 'application/pdf';
+    }
 
     if (isIOS) {
-      ReactNativeBlobUtil.ios.openDocument(path).catch(console.log);
+      ReactNativeBlobUtil.ios.openDocument(finalUri).catch(console.log);
     } else {
       ReactNativeBlobUtil.android
-        .actionViewIntent(path, mime)
-        .catch(console.log);
+        .actionViewIntent(finalUri, mime)
+        .catch(err => {
+          console.log('ActionViewIntent Error:', err);
+          // Fallback to simple absolute path if URI scheme failed
+          ReactNativeBlobUtil.android.actionViewIntent(path, mime).catch(console.log);
+        });
     }
   };
 
@@ -248,34 +287,33 @@ const ReceivedFileScreen = () => {
     const filesToDelete = Array.isArray(file) ? file : [file];
     const isMultiple = filesToDelete.length > 1;
 
-    Alert.alert(
-      isMultiple ? 'Delete Files' : 'Delete File',
-      isMultiple
-        ? `Are you sure you want to delete ${filesToDelete.length} files?`
-        : `Are you sure you want to delete "${filesToDelete[0].name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              for (const f of filesToDelete) {
-                await RNFS.unlink(f.uri);
-              }
-              if (isMultiple) {
-                setIsSelectionMode(false);
-                setSelectedFiles([]);
-              }
-              getFilesFromDirectory(); // Refresh list
-            } catch (error) {
-              console.log('Delete Error:', error);
-              Alert.alert('Error', 'Could not delete file(s)');
-            }
-          },
-        },
-      ],
-    );
+    setConfirmModal({
+      visible: true,
+      title: isMultiple ? 'Delete Files?' : 'Delete File?',
+      message: isMultiple
+        ? `Are you sure you want to delete these ${filesToDelete.length} files? This action cannot be undone.`
+        : `Are you sure you want to delete "${filesToDelete[0].name}"? This action cannot be undone.`,
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          for (const f of filesToDelete) {
+            await RNFS.unlink(f.uri);
+          }
+          if (isMultiple) {
+            setIsSelectionMode(false);
+            setSelectedFiles([]);
+          }
+          getFilesFromDirectory(); // Refresh list
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+        } catch (error) {
+          console.log('Delete Error:', error);
+          setConfirmModal(prev => ({ ...prev, visible: false }));
+          setTimeout(() => {
+            Alert.alert('Error', 'Could not delete file(s)');
+          }, 500);
+        }
+      },
+    });
   };
 
   const shareFile = async file => {
@@ -351,9 +389,9 @@ const ReceivedFileScreen = () => {
       <LinearGradient
         colors={gradientColors}
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 12,
+          width: 28,
+          height: 28,
+          borderRadius: 6,
           justifyContent: 'center',
           alignItems: 'center',
           transform: [{ rotate: '5deg' }],
@@ -363,15 +401,15 @@ const ReceivedFileScreen = () => {
       >
         <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
+            width: 28,
+            height: 28,
+            borderRadius: 6,
             backgroundColor: 'rgba(255,255,255,0.2)',
             justifyContent: 'center',
             alignItems: 'center',
           }}
         >
-          <Icon name={iconName} size={22} color="#fff" iconFamily="Ionicons" />
+          <Icon name={iconName} size={14} color="#fff" iconFamily="Ionicons" />
         </View>
       </LinearGradient>
     );
@@ -393,20 +431,21 @@ const ReceivedFileScreen = () => {
       <AnimatedCard
         style={{
           marginHorizontal: 16,
-          marginVertical: 8,
-          padding: 16,
-          borderRadius: 22,
-          backgroundColor: isSelected ? '#EFF6FF' : '#fff',
-          borderWidth: isSelected ? 2 : 0,
+          marginVertical: 2,
+          padding: 6,
+          paddingHorizontal: 10,
+          borderRadius: 10,
+          backgroundColor: isSelected ? '#F0F7FF' : '#fff',
+          borderWidth: isSelected ? 1.5 : 0,
           borderColor: '#3B82F6',
           flexDirection: 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: isIOS ? 4 : 8 },
-          shadowOpacity: isIOS ? 0.08 : 0.12,
-          shadowRadius: isIOS ? 8 : 16,
-          elevation: 6,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 3,
+          elevation: 2,
           transform: [{ translateY }],
           opacity,
           overflow: isIOS ? 'visible' : 'hidden',
@@ -424,10 +463,10 @@ const ReceivedFileScreen = () => {
           }}
         >
           {renderIcon(item.mimeType)}
-          <View style={{ marginLeft: 16, flex: 1 }}>
+          <View style={{ marginLeft: 12, flex: 1 }}>
             <CustomeText
               fontFamily="Okra-Bold"
-              fontSize={14}
+              fontSize={11}
               color="#1E293B"
               numberOfLines={1}
             >
@@ -437,7 +476,7 @@ const ReceivedFileScreen = () => {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                marginTop: 4,
+                marginTop: 0,
               }}
             >
               <View
@@ -450,7 +489,7 @@ const ReceivedFileScreen = () => {
                 }}
               >
                 <CustomeText
-                  fontSize={10}
+                  fontSize={9}
                   color="#475569"
                   fontFamily="Okra-Medium"
                 >
@@ -458,7 +497,7 @@ const ReceivedFileScreen = () => {
                 </CustomeText>
               </View>
               <CustomeText
-                fontSize={11}
+                fontSize={10}
                 color="#64748B"
                 fontFamily="Okra-Medium"
               >
@@ -473,19 +512,19 @@ const ReceivedFileScreen = () => {
             <TouchableOpacity
               onPress={() => shareFile(item)}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 backgroundColor: '#F1F5F9',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginRight: 8,
+                marginRight: 4,
               }}
             >
               <Icon
                 name="share-outline"
                 iconFamily="Ionicons"
-                size={18}
+                size={14}
                 color="#475569"
               />
             </TouchableOpacity>
@@ -493,19 +532,19 @@ const ReceivedFileScreen = () => {
             <TouchableOpacity
               onPress={() => deleteFile(item)}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 backgroundColor: '#FEF2F2',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginRight: 8,
+                marginRight: 4,
               }}
             >
               <Icon
                 name="trash-outline"
                 iconFamily="Ionicons"
-                size={18}
+                size={14}
                 color="#EF4444"
               />
             </TouchableOpacity>
@@ -514,21 +553,21 @@ const ReceivedFileScreen = () => {
               <LinearGradient
                 colors={['#3B82F6', '#2563EB']}
                 style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
                   justifyContent: 'center',
                   alignItems: 'center',
                   shadowColor: '#3B82F6',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 6,
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 2,
                 }}
               >
                 <Icon
                   name="eye-outline"
                   iconFamily="Ionicons"
-                  size={18}
+                  size={14}
                   color="#fff"
                 />
               </LinearGradient>
@@ -579,13 +618,18 @@ const ReceivedFileScreen = () => {
           style={{
             flex: 1,
             borderRadius: 20,
-            overflow: 'hidden', // 👈 important for iOS
+            overflow: 'hidden',
+            shadowColor: '#3B82F6',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 5,
           }}
         >
           <View
             style={{
               flex: 1,
-              padding: 16, // 👈 move padding here
+              padding: 16,
               justifyContent: 'space-between',
             }}
           >
@@ -617,19 +661,19 @@ const ReceivedFileScreen = () => {
           style={{
             flex: 1,
             borderRadius: 20,
-            overflow: 'hidden', // 🔥 important for iOS
-            shadowColor: '#6D28D9',
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: 10,
+            overflow: 'hidden',
+            shadowColor: '#8B5CF6',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
             elevation: 5,
-            minHeight: 120, // 🔥 keeps layout stable
+            minHeight: 120,
           }}
         >
           <View
             style={{
               flex: 1,
-              padding: 16, // 👈 move padding here
+              padding: 16,
               justifyContent: 'space-between',
             }}
           >
@@ -694,13 +738,13 @@ const ReceivedFileScreen = () => {
                 name={cat.icon}
                 iconFamily={cat.iconFamily}
                 size={16}
-                color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
+                color={isActive ? '#fff' : 'rgba(255,255,255,0.5)'}
                 style={{ marginRight: 8 }}
               />
               <CustomeText
                 fontFamily={isActive ? 'Okra-Bold' : 'Okra-Medium'}
                 fontSize={13}
-                color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
+                color={isActive ? '#fff' : 'rgba(255,255,255,0.5)'}
               >
                 {cat.label}
               </CustomeText>
@@ -736,6 +780,129 @@ const ReceivedFileScreen = () => {
         </TouchableOpacity>
       </View>
     </View>
+  );
+
+  const ConfirmationModal = () => (
+    <Modal
+      transparent
+      visible={confirmModal.visible}
+      animationType="fade"
+      onShow={() => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }}
+      onRequestClose={() =>
+        setConfirmModal({ ...confirmModal, visible: false })
+      }
+    >
+      <View style={modalStyles.modalOverlay}>
+        <Animated.View
+          style={[
+            modalStyles.modalContent,
+            {
+              opacity: fadeAnim,
+              transform: [
+                {
+                  scale: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.9, 1],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['#1a1a2e', '#16213e']}
+            style={modalStyles.modalGradient}
+          >
+            <View style={modalStyles.modalIconContainer}>
+              <View
+                style={[
+                  modalStyles.iconBackground,
+                  {
+                    backgroundColor:
+                      confirmModal.type === 'warning'
+                        ? 'rgba(239, 68, 68, 0.1)'
+                        : 'rgba(16, 185, 129, 0.1)',
+                  },
+                ]}
+              >
+                <Icon
+                  name={
+                    confirmModal.type === 'warning'
+                      ? 'alert-circle'
+                      : 'checkmark-circle'
+                  }
+                  size={40}
+                  color={
+                    confirmModal.type === 'warning' ? '#EF4444' : '#10B981'
+                  }
+                  iconFamily="Ionicons"
+                />
+              </View>
+            </View>
+
+            <CustomeText
+              fontSize={18}
+              fontFamily="Okra-Bold"
+              color="#fff"
+              style={{ textAlign: 'center', marginBottom: 10 }}
+            >
+              {confirmModal.title}
+            </CustomeText>
+
+            <CustomeText
+              fontSize={14}
+              color="rgba(255,255,255,0.7)"
+              style={{ textAlign: 'center', marginBottom: 20 }}
+            >
+              {confirmModal.message}
+            </CustomeText>
+
+            <View style={modalStyles.modalButtons}>
+              <TouchableOpacity
+                style={[modalStyles.modalButton, modalStyles.cancelButton]}
+                onPress={() =>
+                  setConfirmModal({ ...confirmModal, visible: false })
+                }
+              >
+                <CustomeText fontSize={16} fontFamily="Okra-Bold" color="#fff">
+                  Cancel
+                </CustomeText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[modalStyles.modalButton, modalStyles.confirmButton]}
+                onPress={confirmModal.onConfirm}
+              >
+                <LinearGradient
+                  colors={
+                    confirmModal.type === 'warning'
+                      ? ['#EF4444', '#DC2626']
+                      : ['#10B981', '#059669']
+                  }
+                  style={modalStyles.confirmButtonGradient}
+                >
+                  <CustomeText
+                    fontSize={16}
+                    fontFamily="Okra-Bold"
+                    color="#fff"
+                  >
+                    Confirm
+                  </CustomeText>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 
   const renderEmptyState = () => (
@@ -797,6 +964,7 @@ const ReceivedFileScreen = () => {
           style={{ flex: 1 }}
           edges={['top', 'left', 'right', 'bottom']}
         >
+          <ConfirmationModal />
           {/* Header */}
           <Animated.View
             style={{
@@ -842,79 +1010,170 @@ const ReceivedFileScreen = () => {
           {isSelectionMode && (
             <Animated.View
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-evenly',
-                paddingVertical: 10,
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                marginHorizontal: 20,
-                borderRadius: 20,
-                marginBottom: 10,
+                position: 'absolute',
+                bottom: insets.bottom + 10,
+                left: 20,
+                right: 20,
+                zIndex: 100,
+                transform: [
+                  {
+                    translateY: fadeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [100, 0],
+                    }),
+                  },
+                ],
+                opacity: fadeAnim,
               }}
             >
-              <TouchableOpacity
-                onPress={() => {
-                  const selectedItems = receivedFiles.filter(f =>
-                    selectedFiles.includes(f.id),
-                  );
-                  shareFile(selectedItems);
+              <LinearGradient
+                colors={['#1a1a2e', '#16213e']}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-around',
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.1)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 15,
+                  elevation: 10,
                 }}
-                style={{ alignItems: 'center' }}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
               >
-                <Icon
-                  name="share-outline"
-                  iconFamily="Ionicons"
-                  size={24}
-                  color="#fff"
-                />
-                <CustomeText fontSize={10} color="#fff">
-                  Share
-                </CustomeText>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedFiles.length === filteredFiles.length) {
+                      setSelectedFiles([]);
+                      setIsSelectionMode(false);
+                    } else {
+                      setSelectedFiles(filteredFiles.map(f => f.id));
+                    }
+                  }}
+                  style={{ alignItems: 'center', flex: 1 }}
+                >
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: 1,
+                    }}
+                  >
+                    <Icon
+                      name="checkbox-outline"
+                      iconFamily="Ionicons"
+                      size={16}
+                      color="#fff"
+                    />
+                  </View>
+                  <CustomeText
+                    fontSize={9}
+                    color="#fff"
+                    fontFamily="Okra-Medium"
+                  >
+                    {selectedFiles.length === filteredFiles.length
+                      ? 'None'
+                      : 'All'}
+                  </CustomeText>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  const selectedItems = receivedFiles.filter(f =>
-                    selectedFiles.includes(f.id),
-                  );
-                  deleteFile(selectedItems);
-                }}
-                style={{ alignItems: 'center' }}
-              >
-                <Icon
-                  name="trash-outline"
-                  iconFamily="Ionicons"
-                  size={24}
-                  color="#EF4444"
+                <View
+                  style={{
+                    width: 1,
+                    height: 16,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                  }}
                 />
-                <CustomeText fontSize={10} color="#EF4444">
-                  Delete
-                </CustomeText>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  if (selectedFiles.length === filteredFiles.length) {
-                    setSelectedFiles([]);
-                    setIsSelectionMode(false);
-                  } else {
-                    setSelectedFiles(filteredFiles.map(f => f.id));
-                  }
-                }}
-                style={{ alignItems: 'center' }}
-              >
-                <Icon
-                  name="checkbox-outline"
-                  iconFamily="Ionicons"
-                  size={24}
-                  color="#fff"
+                <TouchableOpacity
+                  onPress={() => {
+                    const selectedItems = receivedFiles.filter(f =>
+                      selectedFiles.includes(f.id),
+                    );
+                    shareFile(selectedItems);
+                  }}
+                  style={{ alignItems: 'center', flex: 1 }}
+                >
+                  <LinearGradient
+                    colors={['#3B82F6', '#2563EB']}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: 1,
+                      shadowColor: '#3B82F6',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                    }}
+                  >
+                    <Icon
+                      name="share-outline"
+                      iconFamily="Ionicons"
+                      size={16}
+                      color="#fff"
+                    />
+                  </LinearGradient>
+                  <CustomeText fontSize={9} color="#fff" fontFamily="Okra-Bold">
+                    Share
+                  </CustomeText>
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    width: 1,
+                    height: 16,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                  }}
                 />
-                <CustomeText fontSize={10} color="#fff">
-                  {selectedFiles.length === filteredFiles.length
-                    ? 'Deselect All'
-                    : 'Select All'}
-                </CustomeText>
-              </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const selectedItems = receivedFiles.filter(f =>
+                      selectedFiles.includes(f.id),
+                    );
+                    deleteFile(selectedItems);
+                  }}
+                  style={{ alignItems: 'center', flex: 1 }}
+                >
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginBottom: 1,
+                    }}
+                  >
+                    <Icon
+                      name="trash-outline"
+                      iconFamily="Ionicons"
+                      size={16}
+                      color="#EF4444"
+                    />
+                  </View>
+                  <CustomeText
+                    fontSize={9}
+                    color="#EF4444"
+                    fontFamily="Okra-Medium"
+                  >
+                    Delete
+                  </CustomeText>
+                </TouchableOpacity>
+              </LinearGradient>
             </Animated.View>
           )}
 
@@ -935,46 +1194,53 @@ const ReceivedFileScreen = () => {
               </CustomeText>
             </View>
           ) : receivedFiles.length > 0 ? (
-            <FlatList
-              data={filteredFiles}
-              keyExtractor={item => item.id}
-              renderItem={renderItem}
-              contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
-              ListHeaderComponent={renderHeader}
-              ListEmptyComponent={() => (
-                <View
-                  style={{
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginTop: 40,
-                  }}
-                >
-                  <Icon
-                    name="folder-open"
-                    iconFamily="Ionicons"
-                    size={50}
-                    color="rgba(255,255,255,0.2)"
-                  />
-                  <CustomeText
-                    color="rgba(255,255,255,0.5)"
-                    style={{ marginTop: 12 }}
+            <View style={{ flex: 1 }}>
+              {renderHeader()}
+              <FlatList
+                data={filteredFiles}
+                keyExtractor={item => item.id}
+                renderItem={renderItem}
+                contentContainerStyle={{
+                  paddingBottom: isSelectionMode ? insets.bottom + 80 : 40,
+                  flexGrow: 1,
+                }}
+                style={{ flex: 1 }}
+                ListEmptyComponent={() => (
+                  <View
+                    style={{
+                      flex: 1,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginTop: 40,
+                    }}
                   >
-                    No {CATEGORIES.find(c => c.id === selectedCategory)?.label}{' '}
-                    found
-                  </CustomeText>
-                </View>
-              )}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  tintColor="#fff"
-                  colors={['#3B82F6']}
-                />
-              }
-            />
+                    <Icon
+                      name="folder-open"
+                      iconFamily="Ionicons"
+                      size={50}
+                      color="rgba(255,255,255,0.2)"
+                    />
+                    <CustomeText
+                      color="rgba(255,255,255,0.5)"
+                      style={{ marginTop: 12 }}
+                    >
+                      No{' '}
+                      {CATEGORIES.find(c => c.id === selectedCategory)?.label}{' '}
+                      found
+                    </CustomeText>
+                  </View>
+                )}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#fff"
+                    colors={['#3B82F6']}
+                  />
+                }
+              />
+            </View>
           ) : (
             renderEmptyState()
           )}
@@ -983,5 +1249,63 @@ const ReceivedFileScreen = () => {
     </>
   );
 };
+
+const modalStyles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIconContainer: {
+    marginBottom: 16,
+  },
+  iconBackground: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  confirmButton: {},
+  confirmButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default ReceivedFileScreen;

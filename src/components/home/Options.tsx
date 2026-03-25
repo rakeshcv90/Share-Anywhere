@@ -14,8 +14,8 @@ import { Colors } from '../../utils/Constants';
 
 type OptionsProps = {
   isHome?: boolean;
-  onMediaPickedUp?: (media: any) => void;
-  onFilePickedUp?: (file: any) => void;
+  onMediaPickedUp?: (media: any[]) => void;
+  onFilePickedUp?: (files: any[]) => void;
 };
 
 const optionData = [
@@ -77,7 +77,12 @@ const Options: React.FC<OptionsProps> = ({
     ).start();
   }, []);
 
+  const isPicking = useRef(false);
+
   const handleUniversalPicker = async (type: string) => {
+    if (isPicking.current) return;
+    isPicking.current = true;
+
     console.log('Option selected:', type);
     if (isHome) {
       if (isConnected) {
@@ -85,41 +90,51 @@ const Options: React.FC<OptionsProps> = ({
       } else {
         navigate('SendScreen');
       }
+      isPicking.current = false;
       return;
     }
 
-    switch (type) {
-      case 'image':
-        if (onMediaPickedUp) {
-          pickImage((media: any[]) => {
-            media.forEach(m => onMediaPickedUp({ ...m, type: 'image' }));
-          });
-        }
-        break;
-      case 'video':
-        if (onMediaPickedUp) {
-          pickVideo((media: any[]) => {
-            media.forEach(m => onMediaPickedUp({ ...m, type: 'video' }));
-          });
-        }
-        break;
+    try {
+      switch (type) {
+        case 'image':
+          if (onMediaPickedUp) {
+            pickImage((media: any[]) => {
+              onMediaPickedUp(media.map(m => ({ ...m, type: 'image' })));
+            });
+          }
+          break;
+        case 'video':
+          if (onMediaPickedUp) {
+            pickVideo((media: any[]) => {
+              onMediaPickedUp(media.map(m => ({ ...m, type: 'video' })));
+            });
+          }
+          break;
 
-      case 'audio':
-        if (onFilePickedUp) {
-          pickAudio((files: any[]) => {
-            files.forEach(f => onFilePickedUp({ ...f, type: 'audio' }));
-          });
-        }
-        break;
-      case 'file':
-        if (onFilePickedUp) {
-          pickDocument((files: any[]) => {
-            files.forEach(f => onFilePickedUp({ ...f, type: 'file' }));
-          });
-        }
-        break;
-      default:
-        break;
+        case 'audio':
+          if (onFilePickedUp) {
+            await pickAudio((files: any[]) => {
+              onFilePickedUp(files.map(f => ({ ...f, type: 'audio' })));
+            });
+          }
+          break;
+        case 'file':
+          if (onFilePickedUp) {
+            await pickDocument((files: any[]) => {
+              onFilePickedUp(files.map(f => ({ ...f, type: 'file' })));
+            });
+          }
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      console.log('Picker Error:', e);
+    } finally {
+      // Small timeout to prevent double-click issues
+      setTimeout(() => {
+        isPicking.current = false;
+      }, 500);
     }
   };
 
@@ -132,6 +147,10 @@ const Options: React.FC<OptionsProps> = ({
           style={styles.sectionTitle}
           fontFamily="Okra-Bold"
           fontSize={11}
+          variant="title"
+          color="rgba(255,255,255,0.55)"
+          onLayout={() => {}}
+          numberOfLines={1}
         >
           QUICK ACCESS
         </CustomeText>

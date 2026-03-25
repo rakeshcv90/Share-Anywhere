@@ -167,7 +167,6 @@ const HomeScreen = () => {
                 style={styles.bannerGradient}
               >
                 <View style={styles.bannerContentInner}>
-                  {/* LEFT ICON */}
                   <View style={styles.bannerIconWrap}>
                     <Icon
                       name="swap-horizontal"

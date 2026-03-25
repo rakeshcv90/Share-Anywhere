@@ -10,6 +10,7 @@ export interface ChunkStoreData {
   mimeType?: string;
   totalChunks: number;
   chunkArray: Buffer[];
+  stream?: any;
 }
 
 export interface CurrentChunkSetData {
