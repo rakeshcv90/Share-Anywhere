@@ -17,7 +17,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useTCP } from '../service/TCPProvider';
 import Icon from '../components/global/Icon';
 import { goBack, resetAndNavigate } from '../utils/NavigationUtil';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import CustomeText from '../components/global/CustomeText';
 import Options from '../components/home/Options';
 import { formatFileSize } from '../utils/libraryHelpers';
@@ -29,18 +32,18 @@ import RNFS from 'react-native-fs';
 
 const { width } = Dimensions.get('window');
 
-const FileItem = ({ 
-  item, 
-  index, 
-  isSent, 
-  activeFileId, 
-  isSelected, 
-  isSelectionMode, 
-  onLongPress, 
+const FileItem = ({
+  item,
+  index,
+  isSent,
+  activeFileId,
+  isSelected,
+  isSelectionMode,
+  onLongPress,
   onPress,
   onShare,
   onDelete,
-  onOpen
+  onOpen,
 }) => {
   const itemAnim = useRef(new Animated.Value(0)).current;
   const itemDelay = index * 100;
@@ -274,8 +277,8 @@ const FileItem = ({
           </View>
         )}
 
-        {!isSelectionMode && (
-          !item?.available ? (
+        {!isSelectionMode &&
+          (!item?.available ? (
             // Still transferring or waiting
             <View style={[styles.loadingContainer]}>
               <ActivityIndicator color="#3B82F6" size="small" />
@@ -306,7 +309,12 @@ const FileItem = ({
                   marginRight: 4,
                 }}
               >
-                <Icon name="share-outline" iconFamily="Ionicons" size={14} color="#475569" />
+                <Icon
+                  name="share-outline"
+                  iconFamily="Ionicons"
+                  size={14}
+                  color="#475569"
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -321,7 +329,12 @@ const FileItem = ({
                   marginRight: 4,
                 }}
               >
-                <Icon name="trash-outline" iconFamily="Ionicons" size={14} color="#EF4444" />
+                <Icon
+                  name="trash-outline"
+                  iconFamily="Ionicons"
+                  size={14}
+                  color="#EF4444"
+                />
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => onOpen(item)}>
@@ -335,20 +348,33 @@ const FileItem = ({
                     alignItems: 'center',
                   }}
                 >
-                  <Icon name="eye-outline" iconFamily="Ionicons" size={14} color="#fff" />
+                  <Icon
+                    name="eye-outline"
+                    iconFamily="Ionicons"
+                    size={14}
+                    color="#fff"
+                  />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           ) : (
             // Sent and done
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-               <Icon name="checkmark-done-circle" size={18} color="#10B981" iconFamily="Ionicons" />
-               <CustomeText fontSize={10} color="#10B981" style={{ marginLeft: 4 }}>
-                  Sent
-               </CustomeText>
+              <Icon
+                name="checkmark-done-circle"
+                size={18}
+                color="#10B981"
+                iconFamily="Ionicons"
+              />
+              <CustomeText
+                fontSize={10}
+                color="#10B981"
+                style={{ marginLeft: 4 }}
+              >
+                Sent
+              </CustomeText>
             </View>
-          )
-        )}
+          ))}
       </TouchableOpacity>
     </Animated.View>
   );
@@ -497,6 +523,8 @@ const ConnectionScreen = () => {
               ? 'A file transfer is in progress. Are you sure you want to disconnect and leave?'
               : 'Are you sure you want to disconnect and leave?',
           type: 'warning',
+          confirmText: 'Disconnect',
+          cancelText: 'Stay',
           onConfirm: () => {
             disconnect();
             navigation.goBack();
@@ -526,6 +554,8 @@ const ConnectionScreen = () => {
             ? 'A file transfer is in progress. Are you sure you want to disconnect and leave?'
             : 'Are you sure you want to disconnect and leave?',
         type: 'warning',
+        confirmText: 'Disconnect',
+        cancelText: 'Stay',
         onConfirm: () => {
           disconnect();
           navigation.dispatch(e.data.action);
@@ -554,6 +584,7 @@ const ConnectionScreen = () => {
           activeTab === TABS.SENT ? 'sent' : 'received'
         } ${totalFilesCount} files!`,
         type: 'success',
+        confirmText: 'Awesome',
         onConfirm: () => {},
       });
       setShowSummary(true);
@@ -576,6 +607,8 @@ const ConnectionScreen = () => {
       message:
         'Are you sure you want to disconnect? This will cancel any ongoing transfers.',
       type: 'warning',
+      confirmText: 'Disconnect',
+      cancelText: 'Stay',
       onConfirm: () => {
         disconnect();
       },
@@ -646,7 +679,9 @@ const ConnectionScreen = () => {
     if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
       mime = 'image/' + (ext === 'jpg' ? 'jpeg' : ext);
     } else if (['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(ext)) {
-      mime = 'video/' + (ext === 'mov' ? 'quicktime' : (ext === 'mkv' ? 'x-matroska' : 'mp4'));
+      mime =
+        'video/' +
+        (ext === 'mov' ? 'quicktime' : ext === 'mkv' ? 'x-matroska' : 'mp4');
     } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext)) {
       mime = 'audio/mpeg';
     } else if (ext === 'pdf') {
@@ -661,15 +696,19 @@ const ConnectionScreen = () => {
         .catch(err => {
           console.log('ActionViewIntent Error:', err);
           // Fallback to simple absolute path if URI scheme failed
-          ReactNativeBlobUtil.android.actionViewIntent(path, mime).catch(console.log);
+          ReactNativeBlobUtil.android
+            .actionViewIntent(path, mime)
+            .catch(console.log);
         });
     }
   };
 
   const deleteSelectedFiles = () => {
     if (selectedFiles.length === 0) return;
-    
-    const filesToDelete = receivedFiles.filter(f => selectedFiles.includes(f.id));
+
+    const filesToDelete = receivedFiles.filter(f =>
+      selectedFiles.includes(f.id),
+    );
     const isMultiple = filesToDelete.length > 1;
 
     setConfirmModal({
@@ -679,6 +718,8 @@ const ConnectionScreen = () => {
         ? `Are you sure you want to delete these ${filesToDelete.length} files?`
         : `Are you sure you want to delete "${filesToDelete[0].name}"?`,
       type: 'warning',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
       onConfirm: async () => {
         try {
           for (const f of filesToDelete) {
@@ -686,8 +727,10 @@ const ConnectionScreen = () => {
               await RNFS.unlink(f.uri).catch(() => {});
             }
           }
-          
-          setReceivedFiles(prev => prev.filter(f => !selectedFiles.includes(f.id)));
+
+          setReceivedFiles(prev =>
+            prev.filter(f => !selectedFiles.includes(f.id)),
+          );
           setIsSelectionMode(false);
           setSelectedFiles([]);
           setConfirmModal(prev => ({ ...prev, visible: false }));
@@ -702,7 +745,9 @@ const ConnectionScreen = () => {
 
   const shareSelectedFiles = async () => {
     try {
-      const filesToShare = receivedFiles.filter(f => selectedFiles.includes(f.id));
+      const filesToShare = receivedFiles.filter(f =>
+        selectedFiles.includes(f.id),
+      );
       if (filesToShare.length === 0) return;
 
       const results = [];
@@ -725,7 +770,7 @@ const ConnectionScreen = () => {
         title: 'Share Files',
         failOnCancel: false,
       });
-      
+
       setIsSelectionMode(false);
       setSelectedFiles([]);
     } catch (error) {
@@ -742,6 +787,8 @@ const ConnectionScreen = () => {
       title: 'Delete File?',
       message: `Are you sure you want to delete "${file.name}"?`,
       type: 'warning',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
       onConfirm: async () => {
         try {
           if (file.uri) {
@@ -847,127 +894,129 @@ const ConnectionScreen = () => {
         ]}
       >
         <LinearGradient
-          colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
+          colors={['hsla(0, 0%, 100%, 0.15)', 'rgba(255,255,255,0.05)']}
           style={styles.progressGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <View style={styles.progressHeader}>
-            <View style={styles.progressInfo}>
-              <Icon
-                name={
-                  isFinished
-                    ? 'checkmark-circle'
-                    : isSent
-                    ? 'cloud-upload'
-                    : 'cloud-download'
-                }
-                size={20}
-                color={isFinished ? '#10B981' : '#00E5FF'}
-                iconFamily="Ionicons"
-              />
-              <View style={{ marginLeft: 10, flex: 1 }}>
-                <CustomeText
-                  fontSize={14}
-                  fontFamily="Okra-Bold"
-                  color="#fff"
-                  numberOfLines={1}
-                >
-                  {isFinished
-                    ? 'Transfer Complete'
-                    : activeFile
-                    ? `${isSent ? 'Sending' : 'Receiving'} ${
-                        completedFiles + 1
-                      } of ${totalFiles} files`
-                    : `Preparing next file... (${completedFiles} of ${totalFiles} done)`}
+          <View style={{ padding: 16 }}>
+            <View style={styles.progressHeader}>
+              <View style={styles.progressInfo}>
+                <Icon
+                  name={
+                    isFinished
+                      ? 'checkmark-circle'
+                      : isSent
+                      ? 'cloud-upload'
+                      : 'cloud-download'
+                  }
+                  size={20}
+                  color={isFinished ? '#10B981' : '#00E5FF'}
+                  iconFamily="Ionicons"
+                />
+                <View style={{ marginLeft: 10, flex: 1 }}>
+                  <CustomeText
+                    fontSize={14}
+                    fontFamily="Okra-Bold"
+                    color="#fff"
+                    numberOfLines={1}
+                  >
+                    {isFinished
+                      ? 'Transfer Complete'
+                      : activeFile
+                      ? `${isSent ? 'Sending' : 'Receiving'} ${
+                          completedFiles + 1
+                        } of ${totalFiles} files`
+                      : `Preparing next file... (${completedFiles} of ${totalFiles} done)`}
+                  </CustomeText>
+                  <CustomeText fontSize={11} color="rgba(255,255,255,0.6)">
+                    {isFinished
+                      ? `${totalFiles} files • ${formatFileSize(batchTotal)}`
+                      : `${Math.round(progress * 100)}% • ${formatFileSize(
+                          Math.max(0, batchTotal - batchTransferred),
+                        )} remaining`}
+                  </CustomeText>
+                </View>
+
+                {(isFinished || !isSent) && (
+                  <TouchableOpacity
+                    onPress={onDismiss}
+                    style={{
+                      padding: 4,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Icon
+                      name="close"
+                      size={16}
+                      color="#fff"
+                      iconFamily="Ionicons"
+                    />
+                  </TouchableOpacity>
+                )}
+                {!isFinished && isSent && (
+                  <ActivityIndicator size="small" color="#00E5FF" />
+                )}
+              </View>
+            </View>
+
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBackground}>
+                <Animated.View
+                  style={[
+                    styles.progressBarFill,
+                    { width: `${progress * 100}%` },
+                  ]}
+                />
+              </View>
+            </View>
+
+            {/* New detailed stats row as requested */}
+            <View style={[styles.progressStats, { marginBottom: 10 }]}>
+              <View style={styles.miniStat}>
+                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                  Total Files
                 </CustomeText>
-                <CustomeText fontSize={11} color="rgba(255,255,255,0.6)">
-                  {isFinished
-                    ? `${totalFiles} files • ${formatFileSize(batchTotal)}`
-                    : `${Math.round(progress * 100)}% • ${formatFileSize(
-                        batchTotal - batchTransferred,
-                      )} remaining`}
+                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                  {totalFiles}
                 </CustomeText>
               </View>
+              <View style={styles.miniStat}>
+                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                  {isSent ? 'Sent' : 'Received'}
+                </CustomeText>
+                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                  {completedFiles}
+                </CustomeText>
+              </View>
+              <View style={styles.miniStat}>
+                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                  Remaining
+                </CustomeText>
+                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                  {remainingFiles}
+                </CustomeText>
+              </View>
+            </View>
 
-              {isFinished && (
-                <TouchableOpacity
-                  onPress={onDismiss}
-                  style={{
-                    padding: 4,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                  }}
-                >
-                  <Icon
-                    name="close"
-                    size={16}
-                    color="#fff"
-                    iconFamily="Ionicons"
-                  />
-                </TouchableOpacity>
-              )}
-              {!isFinished && (
-                <ActivityIndicator size="small" color="#00E5FF" />
-              )}
-            </View>
-          </View>
-
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBarBackground}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${progress * 100}%` },
-                ]}
-              />
-            </View>
-          </View>
-
-          {/* New detailed stats row as requested */}
-          <View style={[styles.progressStats, { marginBottom: 10 }]}>
-            <View style={styles.miniStat}>
-              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                Total Files
-              </CustomeText>
-              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                {totalFiles}
-              </CustomeText>
-            </View>
-            <View style={styles.miniStat}>
-              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                {isSent ? 'Sent' : 'Received'}
-              </CustomeText>
-              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                {completedFiles}
-              </CustomeText>
-            </View>
-            <View style={styles.miniStat}>
-              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                Remaining
-              </CustomeText>
-              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                {remainingFiles}
-              </CustomeText>
-            </View>
-          </View>
-
-          <View style={styles.progressStats}>
-            <View>
-              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                Total {isSent ? 'Sent' : 'Received'}
-              </CustomeText>
-              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                {formatFileSize(batchTransferred)}
-              </CustomeText>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                Total Batch Size
-              </CustomeText>
-              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                {formatFileSize(batchTotal)}
-              </CustomeText>
+            <View style={styles.progressStats}>
+              <View>
+                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                  Total {isSent ? 'Sent' : 'Received'}
+                </CustomeText>
+                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                  {formatFileSize(batchTransferred)}
+                </CustomeText>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                  Total Batch Size
+                </CustomeText>
+                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                  {formatFileSize(batchTotal)}
+                </CustomeText>
+              </View>
             </View>
           </View>
         </LinearGradient>
@@ -998,96 +1047,107 @@ const ConnectionScreen = () => {
             colors={['#1a1a2e', '#16213e']}
             style={styles.modalGradient}
           >
-            <View style={styles.modalIconContainer}>
-              <View
-                style={[
-                  styles.iconBackground,
-                  {
-                    backgroundColor:
+            <View
+              style={{
+                padding: 28, // Increased general padding
+                paddingBottom: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <View style={styles.modalIconContainer}>
+                <View
+                  style={[
+                    styles.iconBackground,
+                    {
+                      backgroundColor:
+                        confirmModal.type === 'warning'
+                          ? 'rgba(239, 68, 68, 0.1)'
+                          : 'rgba(16, 185, 129, 0.1)',
+                    },
+                  ]}
+                >
+                  <Icon
+                    name={
                       confirmModal.type === 'warning'
-                        ? 'rgba(239, 68, 68, 0.1)'
-                        : 'rgba(16, 185, 129, 0.1)',
-                  },
-                ]}
-              >
-                <Icon
-                  name={
-                    confirmModal.type === 'warning'
-                      ? 'alert-circle'
-                      : 'checkmark-circle'
-                  }
-                  size={40}
-                  color={
-                    confirmModal.type === 'warning' ? '#EF4444' : '#10B981'
-                  }
-                  iconFamily="Ionicons"
-                />
+                        ? 'alert-circle'
+                        : 'checkmark-circle'
+                    }
+                    size={40}
+                    color={
+                      confirmModal.type === 'warning' ? '#EF4444' : '#10B981'
+                    }
+                    iconFamily="Ionicons"
+                  />
+                </View>
               </View>
-            </View>
 
-            <CustomeText
-              fontSize={18}
-              fontFamily="Okra-Bold"
-              color="#fff"
-              style={{ textAlign: 'center', marginBottom: 10 }}
-            >
-              {confirmModal.title}
-            </CustomeText>
-
-            <CustomeText
-              fontSize={14}
-              color="rgba(255,255,255,0.7)"
-              style={{ textAlign: 'center', marginBottom: 20 }}
-            >
-              {confirmModal.message}
-            </CustomeText>
-
-            <View style={styles.modalButtons}>
-              {confirmModal.type === 'warning' && (
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
-                  onPress={() =>
-                    setConfirmModal({ ...confirmModal, visible: false })
-                  }
-                >
-                  <CustomeText
-                    fontSize={14}
-                    fontFamily="Okra-Bold"
-                    color="#fff"
-                  >
-                    Stay
-                  </CustomeText>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.confirmButton,
-                  confirmModal.type === 'success' && { flex: 1 },
-                ]}
-                onPress={() => {
-                  setConfirmModal({ ...confirmModal, visible: false });
-                  if (confirmModal.onConfirm) confirmModal.onConfirm();
-                }}
+              <CustomeText
+                fontSize={18}
+                fontFamily="Okra-Bold"
+                color="#fff"
+                style={{ textAlign: 'center', marginBottom: 10 }}
               >
-                <LinearGradient
-                  colors={
-                    confirmModal.type === 'warning'
-                      ? ['#EF4444', '#DC2626']
-                      : ['#10B981', '#059669']
-                  }
-                  style={styles.confirmButtonGradient}
-                >
-                  <CustomeText
-                    fontSize={14}
-                    fontFamily="Okra-Bold"
-                    color="#fff"
+                {confirmModal.title}
+              </CustomeText>
+
+              <CustomeText
+                fontSize={14}
+                color="rgba(255,255,255,0.7)"
+                style={{ textAlign: 'center', marginBottom: 20 }}
+              >
+                {confirmModal.message}
+              </CustomeText>
+
+              <View style={styles.modalButtons}>
+                {confirmModal.type === 'warning' && (
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() =>
+                      setConfirmModal({ ...confirmModal, visible: false })
+                    }
                   >
-                    {confirmModal.type === 'warning' ? 'Disconnect' : 'Awesome'}
-                  </CustomeText>
-                </LinearGradient>
-              </TouchableOpacity>
+                    <CustomeText
+                      fontSize={14}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
+                      {confirmModal.cancelText || 'Stay'}
+                    </CustomeText>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.modalButton,
+                    styles.confirmButton,
+                    confirmModal.type === 'success' && { flex: 1 },
+                  ]}
+                  onPress={() => {
+                    setConfirmModal({ ...confirmModal, visible: false });
+                    if (confirmModal.onConfirm) confirmModal.onConfirm();
+                  }}
+                >
+                  <LinearGradient
+                    colors={
+                      confirmModal.type === 'warning'
+                        ? ['#EF4444', '#DC2626']
+                        : ['#10B981', '#059669']
+                    }
+                    style={styles.confirmButtonGradient}
+                  >
+                    <CustomeText
+                      fontSize={14}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
+                      {confirmModal.type === 'warning'
+                        ? confirmModal.confirmText || 'Disconnect'
+                        : confirmModal.confirmText || 'Awesome'}
+                    </CustomeText>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
           </LinearGradient>
         </Animated.View>
@@ -1439,11 +1499,18 @@ const ConnectionScreen = () => {
             >
               <View style={styles.selectionInfo}>
                 <View style={styles.selectionCount}>
-                  <CustomeText fontSize={16} fontFamily="Okra-Bold" color="#fff">
+                  <CustomeText
+                    fontSize={16}
+                    fontFamily="Okra-Bold"
+                    color="#fff"
+                  >
                     {selectedFiles.length}
                   </CustomeText>
                 </View>
-                <TouchableOpacity onPress={unselectAll} style={{ marginLeft: 8 }}>
+                <TouchableOpacity
+                  onPress={unselectAll}
+                  style={{ marginLeft: 8 }}
+                >
                   <CustomeText fontSize={12} color="rgba(255,255,255,0.6)">
                     Deselect
                   </CustomeText>
@@ -1452,24 +1519,48 @@ const ConnectionScreen = () => {
 
               <View style={styles.selectionActions}>
                 <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+                  ]}
                   onPress={selectAllReceived}
                 >
-                  <Icon name="checkbox" size={18} color="#3B82F6" iconFamily="Ionicons" />
+                  <Icon
+                    name="checkbox"
+                    size={18}
+                    color="#3B82F6"
+                    iconFamily="Ionicons"
+                  />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+                  ]}
                   onPress={shareSelectedFiles}
                 >
-                  <Icon name="share-social" size={18} color="#10B981" iconFamily="Ionicons" />
+                  <Icon
+                    name="share-social"
+                    size={18}
+                    color="#10B981"
+                    iconFamily="Ionicons"
+                  />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
+                  style={[
+                    styles.actionButton,
+                    { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                  ]}
                   onPress={deleteSelectedFiles}
                 >
-                  <Icon name="trash" size={18} color="#EF4444" iconFamily="Ionicons" />
+                  <Icon
+                    name="trash"
+                    size={18}
+                    color="#EF4444"
+                    iconFamily="Ionicons"
+                  />
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -1575,7 +1666,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   progressGradient: {
-    padding: 8,
+    borderRadius: 20, // Ensure the gradient itself has the radius for clipping
+    overflow: 'hidden', // Required for iOS borderRadius
   },
   progressHeader: {
     flexDirection: 'row',
@@ -1620,8 +1712,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 14,
-    padding: 10,
-    marginTop: 4,
+    padding: 12, // Increased padding
+    marginTop: 6, // Adjusted margin
   },
   statItem: {
     alignItems: 'center',
@@ -1702,7 +1794,8 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
   },
   modalGradient: {
-    padding: 24,
+    borderRadius: 25, // Match modalContent radius
+    overflow: 'hidden',
     alignItems: 'center',
   },
   modalIconContainer: {

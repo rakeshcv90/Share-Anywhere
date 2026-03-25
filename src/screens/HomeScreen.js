@@ -99,8 +99,6 @@ const HomeScreen = () => {
 
   const checkForUpdate = async () => {
     try {
-      // For Android, comparing version codes is the most reliable method
-      // For iOS, provide the Apple ID and country to ensure the version can be fetched
       const result = await inAppUpdates.current.checkNeedsUpdate(
         Platform.select({
           ios: {

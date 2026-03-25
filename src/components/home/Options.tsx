@@ -190,6 +190,11 @@ const Options: React.FC<OptionsProps> = ({
               <CustomeText
                 style={[styles.label, { color: isHome ? '#000' : '#fff' }]}
                 fontFamily="Okra-Medium"
+                fontSize={12}
+                variant="h6"
+                color={isHome ? '#000' : '#fff'}
+                onLayout={() => {}}
+                numberOfLines={1}
               >
                 {item.label}
               </CustomeText>

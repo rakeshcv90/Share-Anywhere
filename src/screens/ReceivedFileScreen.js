@@ -263,11 +263,13 @@ const ReceivedFileScreen = () => {
     if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
       mime = 'image/' + (ext === 'jpg' ? 'jpeg' : ext);
     } else if (['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(ext)) {
-      mime = 'video/' + (ext === 'mov' ? 'quicktime' : (ext === 'mkv' ? 'x-matroska' : 'mp4'));
+      mime =
+        'video/' +
+        (ext === 'mov' ? 'quicktime' : ext === 'mkv' ? 'x-matroska' : 'mp4');
     } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac'].includes(ext)) {
       mime = 'audio/mpeg';
     } else if (ext === 'pdf') {
-       mime = 'application/pdf';
+      mime = 'application/pdf';
     }
 
     if (isIOS) {
@@ -278,7 +280,9 @@ const ReceivedFileScreen = () => {
         .catch(err => {
           console.log('ActionViewIntent Error:', err);
           // Fallback to simple absolute path if URI scheme failed
-          ReactNativeBlobUtil.android.actionViewIntent(path, mime).catch(console.log);
+          ReactNativeBlobUtil.android
+            .actionViewIntent(path, mime)
+            .catch(console.log);
         });
     }
   };
@@ -294,6 +298,8 @@ const ReceivedFileScreen = () => {
         ? `Are you sure you want to delete these ${filesToDelete.length} files? This action cannot be undone.`
         : `Are you sure you want to delete "${filesToDelete[0].name}"? This action cannot be undone.`,
       type: 'warning',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
       onConfirm: async () => {
         try {
           for (const f of filesToDelete) {
@@ -821,83 +827,99 @@ const ReceivedFileScreen = () => {
             colors={['#1a1a2e', '#16213e']}
             style={modalStyles.modalGradient}
           >
-            <View style={modalStyles.modalIconContainer}>
-              <View
-                style={[
-                  modalStyles.iconBackground,
-                  {
-                    backgroundColor:
+            <View
+              style={{
+                padding: 28,
+                paddingBottom: 32, // Consistent space for iOS buttons
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <View style={modalStyles.modalIconContainer}>
+                <View
+                  style={[
+                    modalStyles.iconBackground,
+                    {
+                      backgroundColor:
+                        confirmModal.type === 'warning'
+                          ? 'rgba(239, 68, 68, 0.1)'
+                          : 'rgba(16, 185, 129, 0.1)',
+                    },
+                  ]}
+                >
+                  <Icon
+                    name={
                       confirmModal.type === 'warning'
-                        ? 'rgba(239, 68, 68, 0.1)'
-                        : 'rgba(16, 185, 129, 0.1)',
-                  },
-                ]}
-              >
-                <Icon
-                  name={
-                    confirmModal.type === 'warning'
-                      ? 'alert-circle'
-                      : 'checkmark-circle'
-                  }
-                  size={40}
-                  color={
-                    confirmModal.type === 'warning' ? '#EF4444' : '#10B981'
-                  }
-                  iconFamily="Ionicons"
-                />
+                        ? 'alert-circle'
+                        : 'checkmark-circle'
+                    }
+                    size={40}
+                    color={
+                      confirmModal.type === 'warning' ? '#EF4444' : '#10B981'
+                    }
+                    iconFamily="Ionicons"
+                  />
+                </View>
               </View>
-            </View>
 
-            <CustomeText
-              fontSize={18}
-              fontFamily="Okra-Bold"
-              color="#fff"
-              style={{ textAlign: 'center', marginBottom: 10 }}
-            >
-              {confirmModal.title}
-            </CustomeText>
-
-            <CustomeText
-              fontSize={14}
-              color="rgba(255,255,255,0.7)"
-              style={{ textAlign: 'center', marginBottom: 20 }}
-            >
-              {confirmModal.message}
-            </CustomeText>
-
-            <View style={modalStyles.modalButtons}>
-              <TouchableOpacity
-                style={[modalStyles.modalButton, modalStyles.cancelButton]}
-                onPress={() =>
-                  setConfirmModal({ ...confirmModal, visible: false })
-                }
+              <CustomeText
+                fontSize={18}
+                fontFamily="Okra-Bold"
+                color="#fff"
+                style={{ textAlign: 'center', marginBottom: 10 }}
               >
-                <CustomeText fontSize={16} fontFamily="Okra-Bold" color="#fff">
-                  Cancel
-                </CustomeText>
-              </TouchableOpacity>
+                {confirmModal.title}
+              </CustomeText>
 
-              <TouchableOpacity
-                style={[modalStyles.modalButton, modalStyles.confirmButton]}
-                onPress={confirmModal.onConfirm}
+              <CustomeText
+                fontSize={14}
+                color="rgba(255,255,255,0.7)"
+                style={{ textAlign: 'center', marginBottom: 20 }}
               >
-                <LinearGradient
-                  colors={
-                    confirmModal.type === 'warning'
-                      ? ['#EF4444', '#DC2626']
-                      : ['#10B981', '#059669']
+                {confirmModal.message}
+              </CustomeText>
+
+              <View style={modalStyles.modalButtons}>
+                <TouchableOpacity
+                  style={[modalStyles.modalButton, modalStyles.cancelButton]}
+                  onPress={() =>
+                    setConfirmModal({ ...confirmModal, visible: false })
                   }
-                  style={modalStyles.confirmButtonGradient}
                 >
                   <CustomeText
                     fontSize={16}
                     fontFamily="Okra-Bold"
                     color="#fff"
                   >
-                    Confirm
+                    {confirmModal.cancelText || 'Cancel'}
                   </CustomeText>
-                </LinearGradient>
-              </TouchableOpacity>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[modalStyles.modalButton, modalStyles.confirmButton]}
+                  onPress={confirmModal.onConfirm}
+                >
+                  <LinearGradient
+                    colors={
+                      confirmModal.type === 'warning'
+                        ? ['#EF4444', '#DC2626']
+                        : ['#10B981', '#059669']
+                    }
+                    style={modalStyles.confirmButtonGradient}
+                  >
+                    <CustomeText
+                      fontSize={16}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
+                      {confirmModal.confirmText ||
+                        (confirmModal.type === 'warning'
+                          ? 'Confirm'
+                          : 'Awesome')}
+                    </CustomeText>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
           </LinearGradient>
         </Animated.View>
@@ -1270,7 +1292,8 @@ const modalStyles = StyleSheet.create({
     elevation: 10,
   },
   modalGradient: {
-    padding: 24,
+    borderRadius: 24,
+    overflow: 'hidden',
     alignItems: 'center',
   },
   modalIconContainer: {

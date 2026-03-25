@@ -21,6 +21,8 @@ export interface CurrentChunkSetData {
   filePath?: string;
   fileSize?: number;
   chunkSize?: number;
+  readStream?: any;
+  fileData?: string;
 }
 
 interface ChunkState {

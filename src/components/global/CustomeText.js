@@ -13,7 +13,7 @@ const fontSizeMap = {
   h7: { android: 10, ios: 9 },
 };
 const CustomeText = ({
-  varient,
+  variant,
   fontFamily = 'Okra-Regular',
   fontSize,
   style,
@@ -28,8 +28,8 @@ const CustomeText = ({
       ? RFValue(fontSize || 12)
       : RFValue(fontSize || 10);
 
-  if (varient && fontSizeMap[varient]) {
-    const defaultSize = fontSizeMap[varient][Platform.OS];
+  if (variant && fontSizeMap[variant]) {
+    const defaultSize = fontSizeMap[variant][Platform.OS];
     computedFontSize = RFValue(fontSize || defaultSize);
   }
   const fontFamilyStyle = {

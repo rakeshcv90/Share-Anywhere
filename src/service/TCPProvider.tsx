@@ -16,6 +16,7 @@ import RNFS from 'react-native-fs';
 import { receiveChunkAck, receiveFileAck, sendChunkAck } from './TCPUtils';
 import { Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 
 // const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk
 // const WINDOW_SIZE = 8;
@@ -90,6 +91,16 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     activeSocket.current = client || serverSocket;
   }, [client, serverSocket]);
 
+  // 🔥 iOS Files App Refresh Trick
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      const dummyPath = `${RNFS.DocumentDirectoryPath}/.readme.txt`;
+      RNFS.writeFile(dummyPath, 'Share Anywhere received files will appear here.', 'utf8')
+        .then(() => console.log('--- iOS: Files app initialization successful.'))
+        .catch(err => console.log('--- iOS: Files app initialization failed:', err));
+    }
+  }, []);
+
   const getSocket = useCallback(() => activeSocket.current, []);
 
   const safeWrite = useCallback((socket: any, data: any) => {
@@ -140,9 +151,78 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
             lowerName.endsWith('.mov');
 
           if (isMedia) {
-            ReactNativeBlobUtil.fs
-              .scanFile([{ path: finalPath }])
-              .catch(err => console.log('Gallery Scan Error:', err));
+            try {
+              // Move to public Pictures folder for Gallery visibility
+              const publicDir = `${RNFS.ExternalStorageDirectoryPath}/Pictures/Share-Anywhere`;
+              const publicPath = `${publicDir}/${chunkStore.name}`;
+
+              await RNFS.mkdir(publicDir);
+              await RNFS.copyFile(finalPath, publicPath);
+
+              console.log('--- Android: Saved to public Gallery:', publicPath);
+              ReactNativeBlobUtil.fs
+                .scanFile([{ path: publicPath }])
+                .catch(err => console.log('Gallery Scan Error:', err));
+            } catch (err) {
+              console.log('Error moving to public gallery:', err);
+              // Fallback to scanning the original file if move fails
+              ReactNativeBlobUtil.fs
+                .scanFile([{ path: finalPath }])
+                .catch(scanErr => console.log('Gallery Scan Error:', scanErr));
+            }
+          } else {
+            // Non-media files (PDF, ZIP, DOCX, Audio) to Downloads folder
+            try {
+              const downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download/Share-Anywhere`;
+              const downloadPath = `${downloadDir}/${chunkStore.name}`;
+
+              await RNFS.mkdir(downloadDir);
+              await RNFS.copyFile(finalPath, downloadPath);
+
+              console.log('--- Android: Saved to Downloads folder:', downloadPath);
+              ReactNativeBlobUtil.fs
+                .scanFile([{ path: downloadPath }])
+                .catch(err => console.log('Download Scan Error:', err));
+            } catch (err) {
+              console.log('Error moving to downloads:', err);
+            }
+          }
+        }
+
+        // 🔥 NEW: iOS Gallery Auto-Save
+        if (Platform.OS === 'ios') {
+          const lowerName = chunkStore.name.toLowerCase();
+          const isImage =
+            lowerName.endsWith('.jpg') ||
+            lowerName.endsWith('.jpeg') ||
+            lowerName.endsWith('.png') ||
+            lowerName.endsWith('.heic');
+          const isVideo =
+            lowerName.endsWith('.mp4') ||
+            lowerName.endsWith('.mov') ||
+            lowerName.endsWith('.m4v');
+
+          if (isImage || isVideo) {
+            try {
+              const mediaType = isImage ? 'photo' : 'video';
+              console.log(`--- iOS: Requesting Photos permission for: ${chunkStore.name}`);
+              
+              // 1. Ensure path exists
+              const fileExists = await RNFS.exists(finalPath);
+              if (!fileExists) {
+                console.log('--- iOS: Final path does not exist:', finalPath);
+                return;
+              }
+
+              // 2. Save using standard CameraRoll method
+              // On iOS, sometimes 'file://' is needed, sometimes not. 
+              // We'll try with 'file://' first as it's standard for RNFS/BlobUtil paths.
+              console.log(`--- iOS: Saving ${mediaType} to Photos library...`);
+              await CameraRoll.save(`file://${finalPath}`, { type: mediaType });
+              console.log('--- iOS: Saved to Photos library ✅');
+            } catch (err) {
+              console.log('--- iOS: Error saving to Photos:', err);
+            }
           }
         }
       }
@@ -169,7 +249,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
   const handlePacket = useCallback(
     (parsedData: any, socket: any) => {
-      console.log('--- TCP Event Received:', parsedData?.event);
+      if (parsedData?.event !== 'receive_chunk_ack' || parsedData?.chunkNo % 20 === 0) {
+        console.log('--- TCP Packet Received:', parsedData?.event, parsedData?.id || parsedData?.chunkNo || '');
+      }
 
       if (parsedData?.event === 'connect') {
         setIsConnected(true);
@@ -451,6 +533,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     setActiveFileTransferredBytes(0);
     setCurrentChunkSet(null);
     setChunkStore(null);
+    isProcessing.current = false;
+    sendQueue.current = [];
+    console.log('--- TCP State Disconnected & Reset');
   }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
 
   const getFileExtension = useCallback((file: any) => {
@@ -484,6 +569,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   }, [currentChunkSet]);
 
   const processNextInQueue = useCallback(() => {
+    console.log('--- processNextInQueue called. Queue size:', sendQueue.current.length, 'isProcessing:', isProcessing.current);
     if (sendQueue.current.length === 0 || isProcessing.current) return;
 
     const nextItem = sendQueue.current.shift();
@@ -498,7 +584,8 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     file: any,
     type: 'image' | 'file' | 'video' | 'audio',
   ) => {
-    if (!file?.uri) return;
+    const activeUri = file?.fileCopyUri || file?.uri;
+    if (!activeUri) return;
 
     const rawData = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
@@ -512,7 +599,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           : Number(file?.fileSize || file?.size || 0),
       mimeType: getFileExtension(file),
       type,
-      uri: file.uri,
+      uri: activeUri,
       available: false,
     };
 
@@ -565,7 +652,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         size: isNaN(size) ? 0 : size,
         mimeType: getFileExtension(file),
         type,
-        uri: file.uri,
+        uri: file?.fileCopyUri || file?.uri,
         available: false,
       };
       return { ...rawData, file };
@@ -614,8 +701,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
   const processFile = async (item: any) => {
     const { file, id, name, size, mimeType } = item;
+    console.log('--- processFile started for:', name, 'ID:', id);
     const socket = getSocket();
     if (!socket) {
+      console.log('--- processFile: No socket available!');
       isProcessing.current = false;
       setActiveFileId(null);
       setActiveFileTotalSize(0);
@@ -625,6 +714,21 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     }
 
     let currentFilePath = file?.uri;
+
+    // Handle iOS ph:// or assets-library URIs (they aren't direct files)
+    if (Platform.OS === 'ios' && (currentFilePath?.startsWith('ph://') || currentFilePath?.startsWith('assets-library://'))) {
+      try {
+        const tempPath = `${RNFS.CachesDirectoryPath}/temp_${Date.now()}_${name}`;
+        console.log('--- Copying iOS Asset to temp path:', tempPath);
+        // Using copyAssetsFileIOS for older or fetch it (simpler to just assume file picker handles it if possible, but for safety:)
+        // If image-picker returned it, we might need a library-specific fetch or just copy it if RNFS supports it
+        await RNFS.copyFile(currentFilePath, tempPath);
+        currentFilePath = tempPath;
+      } catch (err) {
+        console.log('--- iOS Asset Copy Error:', err);
+      }
+    }
+
     if (
       Platform.OS === 'android' &&
       currentFilePath?.startsWith('content://')
@@ -641,70 +745,70 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       }
     }
 
-    const normalizedPath =
-      Platform.OS === 'ios'
-        ? currentFilePath?.replace('file://', '')
-        : currentFilePath;
+    let normalizedPath = currentFilePath;
+    if (Platform.OS === 'ios') {
+      normalizedPath = currentFilePath?.replace(/^file:\/\//, '');
+      if (normalizedPath) {
+        normalizedPath = decodeURIComponent(normalizedPath);
+      }
+    }
+
+    console.log('--- processFile: normalizedPath:', normalizedPath);
+
+    if (normalizedPath && !(await RNFS.exists(normalizedPath))) {
+      console.log('--- ERROR: File does not exist at path:', normalizedPath);
+      isProcessing.current = false;
+      setActiveFileId(null);
+      processNextInQueue();
+      return;
+    }
 
     let chunkSetPayload: any;
-    let rawDataForAck = { id, name, size, mimeType, totalChunks: 0 };
+    let fileSize = Number(size);
 
-    if (Platform.OS === 'ios') {
+    if (!fileSize || isNaN(fileSize)) {
       try {
-        const fileData = await RNFS.readFile(normalizedPath, 'base64');
-        const buffer = Buffer.from(fileData, 'base64');
-        let offset = 0;
-        const chunkArray: Buffer[] = [];
-        while (offset < buffer.length) {
-          chunkArray.push(buffer.slice(offset, offset + CHUNK_SIZE));
-          offset += CHUNK_SIZE;
-        }
-        rawDataForAck.size = buffer.length;
-        rawDataForAck.totalChunks = chunkArray.length;
-        chunkSetPayload = { id, totalChunks: chunkArray.length, chunkArray };
-      } catch (err) {
-        console.log('iOS read error:', err);
-        isProcessing.current = false;
-        setActiveFileId(null);
-        setActiveFileTotalSize(0);
-        setActiveFileTransferredBytes(0);
-        processNextInQueue();
-        return;
+        const stat = await RNFS.stat(normalizedPath!);
+        fileSize = Number(stat.size);
+      } catch {
+        fileSize = 0;
       }
-    } else {
-      let fileSize = Number(size);
-      if (!fileSize || isNaN(fileSize)) {
-        try {
-          const stat = await RNFS.stat(normalizedPath);
-          fileSize = Number(stat.size);
-        } catch {
-          fileSize = 1;
-        }
-      }
-      const totalChunks = Math.ceil(fileSize / CHUNK_SIZE) || 1;
-      rawDataForAck.size = fileSize;
-      rawDataForAck.totalChunks = totalChunks;
-      chunkSetPayload = {
-        id,
-        totalChunks,
-        chunkArray: [],
-        filePath: normalizedPath,
-        fileSize,
-        chunkSize: CHUNK_SIZE,
-      };
     }
+
+    const totalChunks = Math.ceil(fileSize / CHUNK_SIZE) || 1;
+    const rawDataForAck = { id, name, size: fileSize, mimeType, totalChunks };
+
+    chunkSetPayload = {
+      id,
+      totalChunks,
+      chunkArray: [], // Keep empty to signal disk mode
+      filePath: normalizedPath,
+      fileSize,
+      chunkSize: CHUNK_SIZE,
+    };
 
     setCurrentChunkSet(chunkSetPayload);
     setActiveFileId(id);
     setActiveFileTotalSize(rawDataForAck.size);
     setActiveFileTransferredBytes(0);
 
+    // Safety timeout: if no progress for 60s, reset isProcessing
+    const safetyTimeout = setTimeout(() => {
+      if (isProcessing.current && activeFileId === id) {
+        console.log('--- SAFETY: Resetting isProcessing due to inactivity for file:', name);
+        isProcessing.current = false;
+        setActiveFileId(null);
+        processNextInQueue();
+      }
+    }, 60000);
+
     try {
-      console.log('FILE ACKNOWLEDGE SENT ✅:', name);
+      console.log('--- Sending file_ack for:', name);
       safeWrite(
         socket,
         JSON.stringify({ event: 'file_ack', file: rawDataForAck }) + '\n',
       );
+      console.log('FILE ACKNOWLEDGE SENT ✅:', name);
     } catch (error) {
       console.log('Error Sending File:', error);
       isProcessing.current = false;
