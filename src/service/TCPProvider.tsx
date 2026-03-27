@@ -18,10 +18,8 @@ import { Platform } from 'react-native';
 import { useChunkStore } from '../db/chunkStore';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 
-// const CHUNK_SIZE = 1024 * 1024; // 1 MB per chunk
-// const WINDOW_SIZE = 8;
-const CHUNK_SIZE = 256 * 1024; // 🔥 256KB (best balance)
-const WINDOW_SIZE = 64; // 🔥 was 16 → now 64 (BIG BOOST)
+const CHUNK_SIZE = 256 * 1024; // 🚀 256 KB per chunk (stable for JS bridge)
+const WINDOW_SIZE = 32; // 🚀 32 chunks in-flight at once (8MB per round-trip)
 interface TCPContextType {
   server: any;
   client: any;

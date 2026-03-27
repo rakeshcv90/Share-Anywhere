@@ -1051,11 +1051,6 @@ const ReceivedFileScreen = () => {
               <LinearGradient
                 colors={['#1a1a2e', '#16213e']}
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-around',
-                  paddingVertical: 6,
-                  paddingHorizontal: 10,
                   borderRadius: 20,
                   borderWidth: 1,
                   borderColor: 'rgba(255,255,255,0.1)',
@@ -1068,133 +1063,147 @@ const ReceivedFileScreen = () => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <TouchableOpacity
-                  onPress={() => {
-                    if (selectedFiles.length === filteredFiles.length) {
-                      setSelectedFiles([]);
-                      setIsSelectionMode(false);
-                    } else {
-                      setSelectedFiles(filteredFiles.map(f => f.id));
-                    }
-                  }}
-                  style={{ alignItems: 'center', flex: 1 }}
-                >
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: 1,
-                    }}
-                  >
-                    <Icon
-                      name="checkbox-outline"
-                      iconFamily="Ionicons"
-                      size={16}
-                      color="#fff"
-                    />
-                  </View>
-                  <CustomeText
-                    fontSize={9}
-                    color="#fff"
-                    fontFamily="Okra-Medium"
-                  >
-                    {selectedFiles.length === filteredFiles.length
-                      ? 'None'
-                      : 'All'}
-                  </CustomeText>
-                </TouchableOpacity>
-
                 <View
                   style={{
-                    width: 1,
-                    height: 16,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-around',
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
                   }}
-                />
-
-                <TouchableOpacity
-                  onPress={() => {
-                    const selectedItems = receivedFiles.filter(f =>
-                      selectedFiles.includes(f.id),
-                    );
-                    shareFile(selectedItems);
-                  }}
-                  style={{ alignItems: 'center', flex: 1 }}
                 >
-                  <LinearGradient
-                    colors={['#3B82F6', '#2563EB']}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: 1,
-                      shadowColor: '#3B82F6',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedFiles.length === filteredFiles.length) {
+                        setSelectedFiles([]);
+                        setIsSelectionMode(false);
+                      } else {
+                        setSelectedFiles(filteredFiles.map(f => f.id));
+                      }
                     }}
+                    style={{ alignItems: 'center', flex: 1 }}
                   >
-                    <Icon
-                      name="share-outline"
-                      iconFamily="Ionicons"
-                      size={16}
+                    <View
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginBottom: 1,
+                      }}
+                    >
+                      <Icon
+                        name="checkbox-outline"
+                        iconFamily="Ionicons"
+                        size={16}
+                        color="#fff"
+                      />
+                    </View>
+                    <CustomeText
+                      fontSize={9}
                       color="#fff"
-                    />
-                  </LinearGradient>
-                  <CustomeText fontSize={9} color="#fff" fontFamily="Okra-Bold">
-                    Share
-                  </CustomeText>
-                </TouchableOpacity>
+                      fontFamily="Okra-Medium"
+                    >
+                      {selectedFiles.length === filteredFiles.length
+                        ? 'None'
+                        : 'All'}
+                    </CustomeText>
+                  </TouchableOpacity>
 
-                <View
-                  style={{
-                    width: 1,
-                    height: 16,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                  }}
-                />
-
-                <TouchableOpacity
-                  onPress={() => {
-                    const selectedItems = receivedFiles.filter(f =>
-                      selectedFiles.includes(f.id),
-                    );
-                    deleteFile(selectedItems);
-                  }}
-                  style={{ alignItems: 'center', flex: 1 }}
-                >
                   <View
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginBottom: 1,
+                      width: 1,
+                      height: 16,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
                     }}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const selectedItems = receivedFiles.filter(f =>
+                        selectedFiles.includes(f.id),
+                      );
+                      shareFile(selectedItems);
+                    }}
+                    style={{ alignItems: 'center', flex: 1 }}
                   >
-                    <Icon
-                      name="trash-outline"
-                      iconFamily="Ionicons"
-                      size={16}
+                    <LinearGradient
+                      colors={['#3B82F6', '#2563EB']}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginBottom: 1,
+                        shadowColor: '#3B82F6',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                      }}
+                    >
+                      <Icon
+                        name="share-outline"
+                        iconFamily="Ionicons"
+                        size={16}
+                        color="#fff"
+                      />
+                    </LinearGradient>
+                    <CustomeText
+                      fontSize={9}
+                      color="#fff"
+                      fontFamily="Okra-Bold"
+                    >
+                      Share
+                    </CustomeText>
+                  </TouchableOpacity>
+
+                  <View
+                    style={{
+                      width: 1,
+                      height: 16,
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                    }}
+                  />
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      const selectedItems = receivedFiles.filter(f =>
+                        selectedFiles.includes(f.id),
+                      );
+                      deleteFile(selectedItems);
+                    }}
+                    style={{ alignItems: 'center', flex: 1 }}
+                  >
+                    <View
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginBottom: 1,
+                      }}
+                    >
+                      <Icon
+                        name="trash-outline"
+                        iconFamily="Ionicons"
+                        size={16}
+                        color="#EF4444"
+                      />
+                    </View>
+                    <CustomeText
+                      fontSize={9}
                       color="#EF4444"
-                    />
-                  </View>
-                  <CustomeText
-                    fontSize={9}
-                    color="#EF4444"
-                    fontFamily="Okra-Medium"
-                  >
-                    Delete
-                  </CustomeText>
-                </TouchableOpacity>
+                      fontFamily="Okra-Medium"
+                    >
+                      Delete
+                    </CustomeText>
+                  </TouchableOpacity>
+                </View>
               </LinearGradient>
             </Animated.View>
           )}
@@ -1222,6 +1231,7 @@ const ReceivedFileScreen = () => {
                 data={filteredFiles}
                 keyExtractor={item => item.id}
                 renderItem={renderItem}
+                extraData={`${selectedFiles.join(',')}-${isSelectionMode}`}
                 contentContainerStyle={{
                   paddingBottom: isSelectionMode ? insets.bottom + 80 : 40,
                   flexGrow: 1,

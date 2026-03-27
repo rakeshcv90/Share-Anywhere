@@ -378,7 +378,187 @@ const FileItem = ({
       </TouchableOpacity>
     </Animated.View>
   );
+}; // End of FileItem
+
+const TransferProgress = ({
+  activeFile,
+  transferredBytes,
+  totalBytes,
+  isSent,
+  totalFiles,
+  completedFiles,
+  remainingFiles,
+  batchTransferred,
+  batchTotal,
+  showSummary,
+  onDismiss,
+  fadeAnim,
+  slideAnim,
+  activeFileId,
+}) => {
+  const isBatchActive = totalFiles > 0 && remainingFiles > 0;
+  const isFinished = totalFiles > 0 && remainingFiles === 0;
+
+  const progress =
+    batchTotal > 0 ? batchTransferred / batchTotal : isFinished ? 1 : 0;
+
+  // Smooth animated progress bar
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(progressAnim, {
+      toValue: progress,
+      useNativeDriver: false, // width cannot use native driver
+      friction: 8,
+      tension: 60,
+    }).start();
+  }, [progress]);
+
+  const animatedWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+    extrapolate: 'clamp',
+  });
+
+  if (!isBatchActive && !activeFileId && !showSummary) return null;
+
+  return (
+    <Animated.View
+      style={[
+        styles.transferProgressContainer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }],
+        },
+      ]}
+    >
+      <LinearGradient
+        colors={['hsla(0, 0%, 100%, 0.15)', 'rgba(255,255,255,0.05)']}
+        style={styles.progressGradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={{ padding: 16 }}>
+          <View style={styles.progressHeader}>
+            <View style={styles.progressInfo}>
+              <Icon
+                name={
+                  isFinished
+                    ? 'checkmark-circle'
+                    : isSent
+                    ? 'cloud-upload'
+                    : 'cloud-download'
+                }
+                size={20}
+                color={isFinished ? '#10B981' : '#00E5FF'}
+                iconFamily="Ionicons"
+              />
+              <View style={{ marginLeft: 10, flex: 1 }}>
+                <CustomeText
+                  fontSize={14}
+                  fontFamily="Okra-Bold"
+                  color="#fff"
+                  numberOfLines={1}
+                >
+                  {isFinished
+                    ? 'Transfer Complete'
+                    : activeFile
+                    ? `${isSent ? 'Sending' : 'Receiving'} ${
+                        completedFiles + 1
+                      } of ${totalFiles} files`
+                    : `Preparing next file... (${completedFiles} of ${totalFiles} done)`}
+                </CustomeText>
+                <CustomeText fontSize={11} color="rgba(255,255,255,0.6)">
+                  {isFinished
+                    ? `${totalFiles} files • ${formatFileSize(batchTotal)}`
+                    : `${Math.round(progress * 100)}% • ${formatFileSize(
+                        Math.max(0, batchTotal - batchTransferred),
+                      )} remaining`}
+                </CustomeText>
+              </View>
+
+              {(isFinished || !isSent) && (
+                <TouchableOpacity
+                  onPress={onDismiss}
+                  style={{
+                    padding: 4,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 12,
+                  }}
+                >
+                  <Icon
+                    name="close"
+                    size={16}
+                    color="#fff"
+                    iconFamily="Ionicons"
+                  />
+                </TouchableOpacity>
+              )}
+              {!isFinished && isSent && (
+                <ActivityIndicator size="small" color="#00E5FF" />
+              )}
+            </View>
+          </View>
+
+          <View style={styles.progressBarContainer}>
+            <View style={styles.progressBarBackground}>
+              <Animated.View
+                style={[styles.progressBarFill, { width: animatedWidth }]}
+              />
+            </View>
+          </View>
+
+          {/* New detailed stats row as requested */}
+          <View style={[styles.progressStats, { marginBottom: 10 }]}>
+            <View style={styles.miniStat}>
+              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                Total Files
+              </CustomeText>
+              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                {totalFiles}
+              </CustomeText>
+            </View>
+            <View style={styles.miniStat}>
+              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                {isSent ? 'Sent' : 'Received'}
+              </CustomeText>
+              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                {completedFiles}
+              </CustomeText>
+            </View>
+            <View style={styles.miniStat}>
+              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                Remaining
+              </CustomeText>
+              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                {remainingFiles}
+              </CustomeText>
+            </View>
+          </View>
+
+          <View style={styles.progressStats}>
+            <View>
+              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                Total {isSent ? 'Sent' : 'Received'}
+              </CustomeText>
+              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                {formatFileSize(batchTransferred)}
+              </CustomeText>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
+                Total Batch Size
+              </CustomeText>
+              <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
+                {formatFileSize(batchTotal)}
+              </CustomeText>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+    </Animated.View>
+  );
 };
+
 const ConnectionScreen = () => {
   const navigation = useNavigation();
   const {
@@ -514,6 +694,11 @@ const ConnectionScreen = () => {
   // Navigation guard & BackHandler
   useEffect(() => {
     const handleBackAction = () => {
+      if (isSelectionMode) {
+        unselectAll(); // Call unselectAll which clears selection state
+        return true; 
+      }
+
       if (isConnected) {
         setConfirmModal({
           visible: true,
@@ -541,6 +726,13 @@ const ConnectionScreen = () => {
     );
 
     const unsubscribe = navigation.addListener('beforeRemove', e => {
+      // Disallow back navigation if in selection mode, handle within hardwareBackPress
+      if (isSelectionMode) {
+        e.preventDefault();
+        unselectAll();
+        return;
+      }
+
       if (!isConnected) return; // Action already allowed/intentional
 
       // Prevent default behavior
@@ -567,7 +759,7 @@ const ConnectionScreen = () => {
       backHandler.remove();
       unsubscribe();
     };
-  }, [navigation, isConnected, globalRemainingFiles, disconnect]);
+  }, [navigation, isConnected, globalRemainingFiles, disconnect, isSelectionMode]);
 
   // Completion notification
   const prevRemaining = useRef(remainingFilesCount);
@@ -629,9 +821,12 @@ const ConnectionScreen = () => {
 
   const toggleSelection = fileId => {
     setSelectedFiles(prev => {
-      if (prev.includes(fileId)) {
+      const isSelected = prev.includes(fileId);
+      if (isSelected) {
         const next = prev.filter(id => id !== fileId);
-        if (next.length === 0) setIsSelectionMode(false);
+        if (next.length === 0) {
+          setIsSelectionMode(false);
+        }
         return next;
       } else {
         return [...prev, fileId];
@@ -855,174 +1050,11 @@ const ConnectionScreen = () => {
       isSelectionMode={isSelectionMode}
       onLongPress={handleLongPress}
       onPress={handlePress}
-      onShare={shareFile}
       onDelete={deleteFile}
+      onShare={shareFile}
       onOpen={openFile}
     />
   );
-
-  const TransferProgress = ({
-    activeFile,
-    transferredBytes,
-    totalBytes,
-    isSent,
-    totalFiles,
-    completedFiles,
-    remainingFiles,
-    batchTransferred,
-    batchTotal,
-    showSummary,
-    onDismiss,
-  }) => {
-    // Keep visible if there's a batch in progress, just finished, or summary is active
-    const isBatchActive = totalFiles > 0 && remainingFiles > 0;
-    const isFinished = totalFiles > 0 && remainingFiles === 0;
-
-    if (!isBatchActive && !activeFileId && !showSummary) return null;
-
-    const progress =
-      batchTotal > 0 ? batchTransferred / batchTotal : isFinished ? 1 : 0;
-
-    return (
-      <Animated.View
-        style={[
-          styles.transferProgressContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['hsla(0, 0%, 100%, 0.15)', 'rgba(255,255,255,0.05)']}
-          style={styles.progressGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={{ padding: 16 }}>
-            <View style={styles.progressHeader}>
-              <View style={styles.progressInfo}>
-                <Icon
-                  name={
-                    isFinished
-                      ? 'checkmark-circle'
-                      : isSent
-                      ? 'cloud-upload'
-                      : 'cloud-download'
-                  }
-                  size={20}
-                  color={isFinished ? '#10B981' : '#00E5FF'}
-                  iconFamily="Ionicons"
-                />
-                <View style={{ marginLeft: 10, flex: 1 }}>
-                  <CustomeText
-                    fontSize={14}
-                    fontFamily="Okra-Bold"
-                    color="#fff"
-                    numberOfLines={1}
-                  >
-                    {isFinished
-                      ? 'Transfer Complete'
-                      : activeFile
-                      ? `${isSent ? 'Sending' : 'Receiving'} ${
-                          completedFiles + 1
-                        } of ${totalFiles} files`
-                      : `Preparing next file... (${completedFiles} of ${totalFiles} done)`}
-                  </CustomeText>
-                  <CustomeText fontSize={11} color="rgba(255,255,255,0.6)">
-                    {isFinished
-                      ? `${totalFiles} files • ${formatFileSize(batchTotal)}`
-                      : `${Math.round(progress * 100)}% • ${formatFileSize(
-                          Math.max(0, batchTotal - batchTransferred),
-                        )} remaining`}
-                  </CustomeText>
-                </View>
-
-                {(isFinished || !isSent) && (
-                  <TouchableOpacity
-                    onPress={onDismiss}
-                    style={{
-                      padding: 4,
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Icon
-                      name="close"
-                      size={16}
-                      color="#fff"
-                      iconFamily="Ionicons"
-                    />
-                  </TouchableOpacity>
-                )}
-                {!isFinished && isSent && (
-                  <ActivityIndicator size="small" color="#00E5FF" />
-                )}
-              </View>
-            </View>
-
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground}>
-                <Animated.View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${progress * 100}%` },
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* New detailed stats row as requested */}
-            <View style={[styles.progressStats, { marginBottom: 10 }]}>
-              <View style={styles.miniStat}>
-                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                  Total Files
-                </CustomeText>
-                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                  {totalFiles}
-                </CustomeText>
-              </View>
-              <View style={styles.miniStat}>
-                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                  {isSent ? 'Sent' : 'Received'}
-                </CustomeText>
-                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                  {completedFiles}
-                </CustomeText>
-              </View>
-              <View style={styles.miniStat}>
-                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                  Remaining
-                </CustomeText>
-                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                  {remainingFiles}
-                </CustomeText>
-              </View>
-            </View>
-
-            <View style={styles.progressStats}>
-              <View>
-                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                  Total {isSent ? 'Sent' : 'Received'}
-                </CustomeText>
-                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                  {formatFileSize(batchTransferred)}
-                </CustomeText>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <CustomeText fontSize={10} color="rgba(255,255,255,0.5)">
-                  Total Batch Size
-                </CustomeText>
-                <CustomeText fontSize={12} fontFamily="Okra-Bold" color="#fff">
-                  {formatFileSize(batchTotal)}
-                </CustomeText>
-              </View>
-            </View>
-          </View>
-        </LinearGradient>
-      </Animated.View>
-    );
-  };
 
   const ConfirmationModal = () => (
     <Modal
@@ -1302,6 +1334,9 @@ const ConnectionScreen = () => {
               batchTotal={batchTotalSize || totalBatchSize}
               showSummary={showSummary}
               onDismiss={() => setShowSummary(false)}
+              fadeAnim={fadeAnim}
+              slideAnim={slideAnim}
+              activeFileId={activeFileId}
             />
 
             {/* Files Section */}
@@ -1386,43 +1421,6 @@ const ConnectionScreen = () => {
                     </View>
                   </TouchableOpacity>
                 </View>
-
-                {/* Transfer Stats - Only show if no active transfer to save space */}
-                {/* {!activeFileId && (
-                  <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                      <CustomeText
-                        fontSize={20}
-                        fontFamily="Okra-Bold"
-                        color="#fff"
-                      >
-                        {activeTab === TABS.SENT
-                          ? sentFiles?.length
-                          : receivedFiles?.length}
-                      </CustomeText>
-                      <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">
-                        Files
-                      </CustomeText>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                      <CustomeText
-                        fontSize={20}
-                        fontFamily="Okra-Bold"
-                        color="#fff"
-                      >
-                        {formatFileSize(
-                          activeTab === TABS.SENT
-                            ? totalSentBytes
-                            : totalReceivedBytes || 0,
-                        )}
-                      </CustomeText>
-                      <CustomeText fontSize={11} color="rgba(255,255,255,0.5)">
-                        {activeTab === TABS.SENT ? 'Sent' : 'Received'}
-                      </CustomeText>
-                    </View>
-                  </View>
-                )} */}
               </View>
 
               {(activeTab === TABS.SENT
@@ -1432,6 +1430,7 @@ const ConnectionScreen = () => {
                   data={activeTab === TABS.SENT ? sentFiles : receivedFiles}
                   keyExtractor={item => item.id.toString()}
                   renderItem={renderItem}
+                  extraData={`${selectedFiles.join(',')}-${isSelectionMode}-${activeFileId}`}
                   contentContainerStyle={styles.fileList}
                   showsVerticalScrollIndicator={false}
                 />
@@ -1497,71 +1496,81 @@ const ConnectionScreen = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.selectionInfo}>
-                <View style={styles.selectionCount}>
-                  <CustomeText
-                    fontSize={16}
-                    fontFamily="Okra-Bold"
-                    color="#fff"
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                }}
+              >
+                <View style={styles.selectionInfo}>
+                  <View style={styles.selectionCount}>
+                    <CustomeText
+                      fontSize={16}
+                      fontFamily="Okra-Bold"
+                      color="#fff"
+                    >
+                      {selectedFiles.length}
+                    </CustomeText>
+                  </View>
+                  <TouchableOpacity
+                    onPress={unselectAll}
+                    style={{ marginLeft: 8 }}
                   >
-                    {selectedFiles.length}
-                  </CustomeText>
+                    <CustomeText fontSize={12} color="rgba(255,255,255,0.6)">
+                      Deselect
+                    </CustomeText>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  onPress={unselectAll}
-                  style={{ marginLeft: 8 }}
-                >
-                  <CustomeText fontSize={12} color="rgba(255,255,255,0.6)">
-                    Deselect
-                  </CustomeText>
-                </TouchableOpacity>
-              </View>
 
-              <View style={styles.selectionActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: 'rgba(59, 130, 246, 0.1)' },
-                  ]}
-                  onPress={selectAllReceived}
-                >
-                  <Icon
-                    name="checkbox"
-                    size={18}
-                    color="#3B82F6"
-                    iconFamily="Ionicons"
-                  />
-                </TouchableOpacity>
+                <View style={styles.selectionActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: 'rgba(59, 130, 246, 0.1)' },
+                    ]}
+                    onPress={selectAllReceived}
+                  >
+                    <Icon
+                      name="checkbox"
+                      size={18}
+                      color="#3B82F6"
+                      iconFamily="Ionicons"
+                    />
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
-                  ]}
-                  onPress={shareSelectedFiles}
-                >
-                  <Icon
-                    name="share-social"
-                    size={18}
-                    color="#10B981"
-                    iconFamily="Ionicons"
-                  />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+                    ]}
+                    onPress={shareSelectedFiles}
+                  >
+                    <Icon
+                      name="share-social"
+                      size={18}
+                      color="#10B981"
+                      iconFamily="Ionicons"
+                    />
+                  </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.actionButton,
-                    { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                  ]}
-                  onPress={deleteSelectedFiles}
-                >
-                  <Icon
-                    name="trash"
-                    size={18}
-                    color="#EF4444"
-                    iconFamily="Ionicons"
-                  />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionButton,
+                      { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+                    ]}
+                    onPress={deleteSelectedFiles}
+                  >
+                    <Icon
+                      name="trash"
+                      size={18}
+                      color="#EF4444"
+                      iconFamily="Ionicons"
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </LinearGradient>
           </Animated.View>
@@ -1838,11 +1847,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   selectionBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',

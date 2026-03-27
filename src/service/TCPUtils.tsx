@@ -54,12 +54,12 @@ export const receiveFileAck = async (
 
   if (!socket) return;
 
-  // Window size 16 for better stability on iOS bridge
+  // 🚀 Window size 32 — matches sender's WINDOW_SIZE for stable pipelining
   socket.write(
     JSON.stringify({
       event: 'send_chunk_ack',
       chunkNo: 0,
-      windowSize: 16,
+      windowSize: 32,
     }) + '\n',
   );
 };
@@ -79,9 +79,11 @@ export const receiveChunkAck = async (
   const byteLength = (chunk.length * 3) / 4;
   const isLastChunk = chunkNo === chunkStore.totalChunks - 1;
 
-  // 🔥 Await write for data integrity
+  // 🚀 Fire-and-forget write — OS buffers disk I/O; no need to await before ACKing
   if (chunkStore.stream) {
-    await chunkStore.stream.write(chunk);
+    chunkStore.stream.write(chunk).catch((e: any) =>
+      console.log('--- Stream write error:', e),
+    );
   }
 
   setTotalReceivedBytes((prev: any) => prev + byteLength);
@@ -157,6 +159,8 @@ export const sendChunkAck = async (
       // Base64 chars = Math.ceil(bytes / 3) * 4.
       const charsPerChunk = Math.ceil(activeChunkSize / 3) * 4;
 
+      let bytesSinceLastUpdate = 0;
+
       for (let i = startChunkIndex; i < end; i++) {
         const startChar = i * charsPerChunk;
         const endChar = Math.min(startChar + charsPerChunk, activeData.length);
@@ -172,11 +176,19 @@ export const sendChunkAck = async (
         }) + '\n';
 
         socket.write(packet);
-        accumulatedBytes += (chunk.length * 3) / 4;
+        
+        // 🚀 Batch progress updates to prevent UI thread from freezing
+        const chunkBytes = (chunk.length * 3) / 4;
+        bytesSinceLastUpdate += chunkBytes;
+
+        if ((i - startChunkIndex) % 8 === 7 || i === end - 1) {
+          const bytesToUpdate = bytesSinceLastUpdate;
+          bytesSinceLastUpdate = 0;
+          setTotalSentBytes((prev: any) => prev + bytesToUpdate);
+          setActiveFileTransferredBytes((prev: any) => prev + bytesToUpdate);
+        }
       }
 
-      setTotalSentBytes((prev: any) => prev + accumulatedBytes);
-      setActiveFileTransferredBytes((prev: any) => prev + accumulatedBytes);
 
       if (end === totalChunks) {
         console.log('--- iOS: ALL CHUNKS SENT SUCCESSFULLY ✅');
@@ -187,41 +199,43 @@ export const sendChunkAck = async (
     }
   }
 
-  // --- Android/Fallback Path: Uses traditional RNFS.read bits ---
+  // --- Android/Fallback Path: Streaming read-and-send (one chunk at a time) ---
+  // Reading & sending immediately pipelines TCP and gives per-chunk progress updates.
   const activeFileSize = Math.floor(Number(currentChunkSet.fileSize || 0));
   const end = Math.min(startChunkIndex + windowSize, totalChunks);
-  let accumulatedBytes = 0;
-  const readPromises: Promise<string>[] = [];
 
   try {
-    for (let i = startChunkIndex; i < end; i++) {
-       const position = (i * activeChunkSize) | 0;
-       const readLength = Math.min(activeChunkSize, activeFileSize - position) | 0;
-       if (readLength <= 0) continue;
-       readPromises.push(RNFS.read(filePath, readLength, position, 'base64'));
-    }
+    let bytesSinceLastUpdate = 0;
 
-    const chunks = await Promise.all(readPromises);
-    for (let i = 0; i < chunks.length; i++) {
-      const chunkIndex = startChunkIndex + i;
-      const base64Chunk = chunks[i];
+    for (let i = startChunkIndex; i < end; i++) {
+      const position = (i * activeChunkSize) | 0;
+      const readLength = Math.min(activeChunkSize, activeFileSize - position) | 0;
+      if (readLength <= 0) continue;
+
+      const base64Chunk = await RNFS.read(filePath, readLength, position, 'base64');
       if (!base64Chunk) continue;
 
       const packet = JSON.stringify({
         event: 'receive_chunk_ack',
         chunk: base64Chunk,
-        chunkNo: chunkIndex,
+        chunkNo: i,
         windowSize,
       }) + '\n';
 
       socket.write(packet);
-      accumulatedBytes += (base64Chunk.length * 3) / 4;
+
+      // 🚀 Batch progress updates to prevent UI thread from freezing
+      const chunkBytes = (base64Chunk.length * 3) / 4;
+      bytesSinceLastUpdate += chunkBytes;
+
+      if ((i - startChunkIndex) % 8 === 7 || i === end - 1) {
+        const bytesToUpdate = bytesSinceLastUpdate;
+        bytesSinceLastUpdate = 0;
+        setTotalSentBytes((prev: any) => prev + bytesToUpdate);
+        setActiveFileTransferredBytes((prev: any) => prev + bytesToUpdate);
+      }
     }
   } catch (err) {
     console.log('--- CRITICAL: sendChunkAck Error:', err);
-    return;
   }
-
-  setTotalSentBytes((prev: any) => prev + accumulatedBytes);
-  setActiveFileTransferredBytes((prev: any) => prev + accumulatedBytes);
 };
