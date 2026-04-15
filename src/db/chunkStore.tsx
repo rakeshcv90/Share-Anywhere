@@ -23,17 +23,25 @@ export interface CurrentChunkSetData {
   chunkSize?: number;
   readStream?: any;
   fileData?: string;
+  name?: string;
+  lastChunkNo?: number;
 }
 
 interface ChunkState {
   chunkStore: ChunkStoreData | null;
   currentChunkSet: CurrentChunkSetData | null;
+  isPaused: boolean;
+  activeFileTransferredBytes: number;
 
   setChunkStore: (data: ChunkStoreData | null) => void;
   resetChunkStore: () => void;
 
-  setCurrentChunkSet: (data: CurrentChunkSetData | null) => void;
+  setCurrentChunkSet: (data: Partial<CurrentChunkSetData> | null) => void;
   resetCurrentChunkSet: () => void;
+
+  togglePause: () => void;
+  setPaused: (paused: boolean) => void;
+  setActiveFileTransferredBytes: (bytes: number | ((prev: number) => number)) => void;
 }
 
 /* ---------- STORE ---------- */
@@ -41,12 +49,32 @@ interface ChunkState {
 export const useChunkStore = create<ChunkState>(set => ({
   chunkStore: null,
   currentChunkSet: null,
+  isPaused: false,
+  activeFileTransferredBytes: 0,
 
   setChunkStore: data => set({ chunkStore: data }),
 
   resetChunkStore: () => set({ chunkStore: null }),
 
-  setCurrentChunkSet: data => set({ currentChunkSet: data }),
+  setCurrentChunkSet: data =>
+    set(state => ({
+      currentChunkSet:
+        data === null
+          ? null
+          : state.currentChunkSet
+          ? { ...state.currentChunkSet, ...data }
+          : (data as CurrentChunkSetData),
+    })),
 
   resetCurrentChunkSet: () => set({ currentChunkSet: null }),
+
+  togglePause: () => set(state => ({ isPaused: !state.isPaused })),
+  setPaused: (paused: boolean) => set({ isPaused: paused }),
+  setActiveFileTransferredBytes: bytes =>
+    set(state => ({
+      activeFileTransferredBytes:
+        typeof bytes === 'function'
+          ? bytes(state.activeFileTransferredBytes)
+          : bytes,
+    })),
 }));

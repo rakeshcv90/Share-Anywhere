@@ -8,22 +8,6 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Share Anywhere</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -38,11 +22,38 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>shareanywhere</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationQueriesSchemes</key>
-    <array>
-  <string>itms-apps</string>
-</array>
+	<array>
+		<string>itms-apps</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
@@ -51,29 +62,30 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Share Anywhere needs access to your Apple Music and media library to allow you to select and securely transfer audio files to nearby devices.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_tcp._tcp</string>
 	</array>
-
 	<key>NSCameraUsageDescription</key>
 	<string>Share Anywhere uses your camera to scan QR codes to connect with nearby devices and to capture photos or videos you want to share. For example, you can scan a QR code displayed on another device to instantly establish a peer-to-peer connection for file sharing.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Share Anywhere requires access to your contacts to allow you to select and share contact details with nearby devices over a direct peer-to-peer connection. For example, you can send a business card or contact info to a friend's phone instantly.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Share Anywhere accesses your Documents folder to let you select files to share with nearby devices and to save files received from others. For example, you can pick a PDF from your Documents folder and send it wirelessly to a nearby contact.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Share Anywhere uses your local network to discover and connect to nearby devices for direct peer-to-peer file sharing without the internet. For example, it finds other phones on the same Wi-Fi network so you can instantly send photos, videos, or documents to them.</string>
-    <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Share Anywhere saves photos and videos received from nearby devices directly to your photo library. For example, when a contact sends you an image over a peer-to-peer connection, it will be saved to your Photos app.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Share Anywhere uses location services to help discover nearby devices on the same network for fast file sharing.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Share Anywhere requires microphone access for video recording and camera functionality.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Share Anywhere saves photos and videos received from nearby devices directly to your photo library. For example, when a contact sends you an image over a peer-to-peer connection, it will be saved to your Photos app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-    <string>Share Anywhere accesses your photo library so you can select photos and videos to share wirelessly with nearby devices. For example, you can pick multiple photos and send them to a friend's device without using mobile data or the internet.</string>
-    <key>NSAppleMusicUsageDescription</key>
-    <string>Share Anywhere needs access to your Apple Music and media library to allow you to select and securely transfer audio files to nearby devices.</string>
-
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Share Anywhere uses location services to help discover nearby devices on the same network for fast file sharing.</string>
+	<string>Share Anywhere accesses your photo library so you can select photos and videos to share wirelessly with nearby devices. For example, you can pick multiple photos and send them to a friend's device without using mobile data or the internet.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
-
 	<key>UIAppFonts</key>
 	<array>
 		<string>Okra-Medium.ttf</string>
@@ -87,23 +99,21 @@
 	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>
-	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>arm64</string>
 	</array>
-  <key>UISupportedInterfaceOrientations</key>
-  <array>
-      <string>UIInterfaceOrientationPortrait</string>
-      <string>UIInterfaceOrientationPortraitUpsideDown</string>
-      <string>UIInterfaceOrientationLandscapeLeft</string>
-      <string>UIInterfaceOrientationLandscapeRight</string>
-  </array>
-  <key>UIRequiresFullScreen</key>
-  <true/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
 </dict>

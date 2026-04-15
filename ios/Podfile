@@ -20,13 +20,14 @@ node_require('react-native-permissions/scripts/setup.rb')
 platform :ios, '15.1'
 prepare_react_native_project!
 
+$VisionCamera_enableCodeScanner = true
 
 setup_permissions([
   'Camera',
   'MediaLibrary',
   'PhotoLibrary',
   'PhotoLibraryAddOnly',
-
+  'LocationWhenInUse',
 ])
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
@@ -51,4 +52,7 @@ target 'SHareIt' do
       # :ccache_enabled => true
     )
   end
+end
+
+target 'ShareExtension' do
 end

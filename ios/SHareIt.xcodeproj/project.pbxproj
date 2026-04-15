@@ -8,32 +8,73 @@
 
 /* Begin PBXBuildFile section */
 		0C80B921A6F3F58F76C31292 /* libPods-SHareIt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-SHareIt.a */; };
+		0F15DB3262131F565DC696EA /* TurboTransferModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DA7A5B9BA5C697D2232F4AA /* TurboTransferModule.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		143E1ABA434E42469281AC8B /* Okra-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BFFADC4C6B4642488BAA5469 /* Okra-ExtraBold.ttf */; };
+		22F34D88969171098175C231 /* libPods-ShareExtension.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B29F6F3E4873283F1A7C64C5 /* libPods-ShareExtension.a */; };
 		291BCA5F652F463CBE73CFF4 /* Okra-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BD2A466AEC884A2C850A1505 /* Okra-Medium.ttf */; };
 		2AD174811B9D43F69DF043C5 /* Okra-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3E0F8C5042D74F829753C583 /* Okra-Regular.ttf */; };
+		3BFA333B0D7A12212BDBFF78 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97C79CF40BC8D85A57F9593A /* ShareViewController.swift */; };
+		4F5EF0F90F6B7224D863A77A /* ShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 720EDFA7D7C1324C6B79DAA1 /* ShareExtension.appex */; };
+		65C2B503BE379A5AAE604641 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58B35F170672A8792636A65B /* Foundation.framework */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		97131FF7DDDD41128080B5DF /* Okra-MediumLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 737B70EF1FD342359B57C6AE /* Okra-MediumLight.ttf */; };
+		A63ED3F4D9C5690616C8B74E /* TurboTransferModule.m in Sources */ = {isa = PBXBuildFile; fileRef = F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */; };
 		F2C2ED98B2BA43EA9CE56CFB /* Okra-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F514E8368CBA44C08ADED8FA /* Okra-Bold.ttf */; };
 		F552C523C025F7D98B2E2368 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		CBA9759A4D5B3020111B561B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 96C312A9B91F5F378294A4E8;
+			remoteInfo = ShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		6EAF357CDCB59911FADA4E8A /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4F5EF0F90F6B7224D863A77A /* ShareExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0D7AFFF514B5B2DA002F9C5D /* SHareIt.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = SHareIt.entitlements; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* SHareIt.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SHareIt.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = SHareIt/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = SHareIt/Info.plist; sourceTree = "<group>"; };
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = SHareIt/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		2DA7A5B9BA5C697D2232F4AA /* TurboTransferModule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TurboTransferModule.swift; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-SHareIt.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SHareIt.debug.xcconfig"; path = "Target Support Files/Pods-SHareIt/Pods-SHareIt.debug.xcconfig"; sourceTree = "<group>"; };
 		3E0F8C5042D74F829753C583 /* Okra-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-Regular.ttf"; path = "../src/assets/fonts/Okra-Regular.ttf"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-SHareIt.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SHareIt.release.xcconfig"; path = "Target Support Files/Pods-SHareIt/Pods-SHareIt.release.xcconfig"; sourceTree = "<group>"; };
+		58B35F170672A8792636A65B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-SHareIt.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SHareIt.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		720EDFA7D7C1324C6B79DAA1 /* ShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		737B70EF1FD342359B57C6AE /* Okra-MediumLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-MediumLight.ttf"; path = "../src/assets/fonts/Okra-MediumLight.ttf"; sourceTree = "<group>"; };
-		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SHareIt/AppDelegate.swift; sourceTree = "<group>"; };
-		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SHareIt/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		8864392F5FD36E3AE10185C6 /* Pods-ShareExtension.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShareExtension.debug.xcconfig"; path = "Target Support Files/Pods-ShareExtension/Pods-ShareExtension.debug.xcconfig"; sourceTree = "<group>"; };
+		8F183FB20A60D7E18081DFD7 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
+		93422CFD3158BF522FAF8951 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		97C79CF40BC8D85A57F9593A /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		B29F6F3E4873283F1A7C64C5 /* libPods-ShareExtension.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ShareExtension.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD2A466AEC884A2C850A1505 /* Okra-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-Medium.ttf"; path = "../src/assets/fonts/Okra-Medium.ttf"; sourceTree = "<group>"; };
 		BFFADC4C6B4642488BAA5469 /* Okra-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-ExtraBold.ttf"; path = "../src/assets/fonts/Okra-ExtraBold.ttf"; sourceTree = "<group>"; };
+		C9E98D016DA53F5201B877C1 /* Pods-ShareExtension.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ShareExtension.release.xcconfig"; path = "Target Support Files/Pods-ShareExtension/Pods-ShareExtension.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = TurboTransferModule.m; sourceTree = "<group>"; };
 		F514E8368CBA44C08ADED8FA /* Okra-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-Bold.ttf"; path = "../src/assets/fonts/Okra-Bold.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -43,6 +84,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-SHareIt.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C34E4CEF82F286ADF50D5BB1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65C2B503BE379A5AAE604641 /* Foundation.framework in Frameworks */,
+				22F34D88969171098175C231 /* libPods-ShareExtension.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -57,8 +107,11 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				0D7AFFF514B5B2DA002F9C5D /* SHareIt.entitlements */,
+				2DA7A5B9BA5C697D2232F4AA /* TurboTransferModule.swift */,
+				F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */,
 			);
-			name = SHareIt;
+			path = SHareIt;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
@@ -66,6 +119,8 @@
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				5DCACB8F33CDC322A6C60F78 /* libPods-SHareIt.a */,
+				E92134756D8CEEA32F71FBEA /* iOS */,
+				B29F6F3E4873283F1A7C64C5 /* libPods-ShareExtension.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -86,6 +141,7 @@
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				85F6D976BE954E6894274EA3 /* Resources */,
+				E72241A45A98270E71C1F642 /* ShareExtension */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -96,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				13B07F961A680F5B00A75B9A /* SHareIt.app */,
+				720EDFA7D7C1324C6B79DAA1 /* ShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -117,8 +174,28 @@
 			children = (
 				3B4392A12AC88292D35C810B /* Pods-SHareIt.debug.xcconfig */,
 				5709B34CF0A7D63546082F79 /* Pods-SHareIt.release.xcconfig */,
+				C9E98D016DA53F5201B877C1 /* Pods-ShareExtension.release.xcconfig */,
+				8864392F5FD36E3AE10185C6 /* Pods-ShareExtension.debug.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		E72241A45A98270E71C1F642 /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				97C79CF40BC8D85A57F9593A /* ShareViewController.swift */,
+				93422CFD3158BF522FAF8951 /* Info.plist */,
+				8F183FB20A60D7E18081DFD7 /* ShareExtension.entitlements */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		E92134756D8CEEA32F71FBEA /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				58B35F170672A8792636A65B /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -135,15 +212,35 @@
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
+				6EAF357CDCB59911FADA4E8A /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				EF868F9AADFE82AD80998944 /* PBXTargetDependency */,
 			);
 			name = SHareIt;
 			productName = SHareIt;
 			productReference = 13B07F961A680F5B00A75B9A /* SHareIt.app */;
 			productType = "com.apple.product-type.application";
+		};
+		96C312A9B91F5F378294A4E8 /* ShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 028BFB4E59441AA25F259080 /* Build configuration list for PBXNativeTarget "ShareExtension" */;
+			buildPhases = (
+				A3DCB0BD20D1A11AFE788B70 /* [CP] Check Pods Manifest.lock */,
+				ECB3CEAAE8A913F57A818936 /* Sources */,
+				C34E4CEF82F286ADF50D5BB1 /* Frameworks */,
+				0505857B305AAACE8657F1A8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShareExtension;
+			productName = ShareExtension;
+			productReference = 720EDFA7D7C1324C6B79DAA1 /* ShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -172,11 +269,19 @@
 			projectRoot = "";
 			targets = (
 				13B07F861A680F5B00A75B9A /* SHareIt */,
+				96C312A9B91F5F378294A4E8 /* ShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0505857B305AAACE8657F1A8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		13B07F8E1A680F5B00A75B9A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -232,6 +337,28 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-SHareIt/Pods-SHareIt-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		A3DCB0BD20D1A11AFE788B70 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ShareExtension-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
 		C38B50BA6285516D6DCD4F65 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -283,21 +410,65 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				0F15DB3262131F565DC696EA /* TurboTransferModule.swift in Sources */,
+				A63ED3F4D9C5690616C8B74E /* TurboTransferModule.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ECB3CEAAE8A913F57A818936 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3BFA333B0D7A12212BDBFF78 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		EF868F9AADFE82AD80998944 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ShareExtension;
+			target = 96C312A9B91F5F378294A4E8 /* ShareExtension */;
+			targetProxy = CBA9759A4D5B3020111B561B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0E07C0D0952F99A177CF14A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = C9E98D016DA53F5201B877C1 /* Pods-ShareExtension.release.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				DEVELOPMENT_TEAM = 4P2UTHTKB7;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shareit.share.clone.switch.ShareExtension;
+				PRODUCT_NAME = ShareExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-SHareIt.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = SHareIt/SHareIt.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 4P2UTHTKB7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SHareIt/Info.plist;
@@ -306,7 +477,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -330,9 +501,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = SHareIt/SHareIt.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 4P2UTHTKB7;
 				INFOPLIST_FILE = SHareIt/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -340,7 +512,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -503,9 +675,41 @@
 			};
 			name = Release;
 		};
+		9195F71918A63F248934DAE5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8864392F5FD36E3AE10185C6 /* Pods-ShareExtension.debug.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
+				DEVELOPMENT_TEAM = 4P2UTHTKB7;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.shareit.share.clone.switch.ShareExtension;
+				PRODUCT_NAME = ShareExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		028BFB4E59441AA25F259080 /* Build configuration list for PBXNativeTarget "ShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0E07C0D0952F99A177CF14A2 /* Release */,
+				9195F71918A63F248934DAE5 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "SHareIt" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

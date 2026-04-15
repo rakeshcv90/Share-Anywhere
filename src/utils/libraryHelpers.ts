@@ -10,6 +10,8 @@ import {
   request, 
   openSettings 
 } from 'react-native-permissions';
+import Contacts from 'react-native-contacts';
+import RNFS from 'react-native-fs';
 
 type MediaPickedCallback = (media: Asset) => void;
 type FilePickedCallback = (file: any) => void;
@@ -21,7 +23,8 @@ export const pickImage = (onMediaPickedUp: (media: Asset[]) => void) => {
       quality: 1,
       includeBase64: false,
       selectionLimit: 0, // Allow multiple selection
-    },
+      copyTo: 'cachesDirectory' as any, // Guarantee local file:// URI
+    } as any,
     (response: any) => {
       if (response.didCancel) {
         console.log('User canceled image picker');
@@ -30,41 +33,94 @@ export const pickImage = (onMediaPickedUp: (media: Asset[]) => void) => {
       } else {
         const {assets} = response;
         if (assets && assets.length > 0) {
-          onMediaPickedUp(assets);
+          const normalized = assets.map((a: any) => ({
+            ...a,
+            uri: a.copyToPath || a.uri,
+            copyToPath: a.copyToPath,
+            name: a.fileName || a.name,
+            size: a.fileSize || a.size || 0,
+          }));
+          onMediaPickedUp(normalized);
         }
       }
     },
   );
 };
-export const pickVideo = (onMediaPickedUp: (media: Asset[]) => void) => {
-  launchImageLibrary(
-    {
-      mediaType: 'video',
-      quality: 1,
-      selectionLimit: 0, // Allow multiple selection
-    },
-    response => {
-      if (response.didCancel) return;
+export const pickVideo = async (onMediaPickedUp: (media: Asset[]) => void) => {
+  try {
+    if (Platform.OS === 'ios') {
+      // 🍎 iOS: Use image library picker — the document picker (Files app) does NOT show
+      // Photos library videos. launchImageLibrary accesses the camera roll where videos live.
+      launchImageLibrary(
+        {
+          mediaType: 'video',
+          quality: 1,
+          includeBase64: false,
+          selectionLimit: 0, // Allow multiple selection
+          copyTo: 'cachesDirectory' as any, // Ensures a local file:// URI for stable access
+        } as any,
+        (response: any) => {
+          if (response.didCancel) {
+            console.log('User canceled video picker');
+          } else if (response.errorCode) {
+            console.log('VideoPicker Error: ', response.errorMessage);
+          } else {
+            const {assets} = response;
+            if (assets && assets.length > 0) {
+              // Normalize: ensure copyToPath is used as the primary URI
+              const normalized = assets.map((a: any) => ({
+                ...a,
+                uri: a.copyToPath || a.uri,
+                copyToPath: a.copyToPath,
+                name: a.fileName || a.name,
+                size: a.fileSize || a.size || 0,
+              }));
+              console.log(`--- pickVideo (iOS): ${normalized.length} videos selected via image library`);
+              onMediaPickedUp(normalized);
+            }
+          }
+        },
+      );
+    } else {
+      // 🤖 Android: Use document picker for INSTANT results — avoids react-native-image-picker's
+      // slow video metadata probing (width/height/duration) which causes 20-30s delays
+      // when selecting 10-15+ videos. The document picker returns content:// URIs
+      // immediately without scanning each video file.
+      const files = await pick({
+        type: ['video/*'],
+        allowMultiSelection: true,
+      });
 
-      if (response.errorCode) {
-        console.log('VideoPicker Error:', response.errorMessage);
-        return;
+      if (files && files.length > 0) {
+        // Transform to match Asset-like format expected by onMediaPickedUp/sendBatchAck
+        const assets = files.map((f: any) => ({
+          uri: f.uri,
+          fileName: f.name,
+          fileSize: f.size ? Number(f.size) : 0,
+          type: f.type || 'video/mp4',
+          name: f.name,
+          size: f.size ? Number(f.size) : 0,
+        }));
+        console.log(`--- pickVideo (Android): ${assets.length} videos selected via document picker`);
+        onMediaPickedUp(assets as any);
       }
-
-      const assets = response.assets;
-      if (assets && assets.length > 0) onMediaPickedUp(assets);
-    },
-  );
+    }
+  } catch (err: any) {
+    if (err?.code !== 'DOCUMENT_PICKER_CANCELED') {
+      console.log('Video pick error:', err);
+    }
+  }
 };
 
 export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
   try {
     // Small delay to ensure Android activity state is stable
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 200));
     
     const files = await pick({
-      type: ['*/*', 'audio/*'],
+      type: Platform.OS === 'ios' ? ['public.audio'] : ['*/*', 'audio/*'],
       allowMultiSelection: true,
+      copyTo: Platform.OS === 'ios' ? 'cachesDirectory' : undefined,
     });
 
     onFilePickedUp(files);
@@ -76,15 +132,118 @@ export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
 export const pickDocument = async (onFilePickedUp: (files: any[]) => void) => {
   try {
     // Small delay to ensure Android activity state is stable
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise<void>(resolve => setTimeout(() => resolve(), 200));
 
     const pickResults = await pick({
       allowMultiSelection: true,
-      type: ['*/*'],
+      type: Platform.OS === 'ios' ? ['public.item', 'public.content', 'public.data'] : ['*/*'],
+      copyTo: Platform.OS === 'ios' ? 'cachesDirectory' : undefined,
     });
     onFilePickedUp(pickResults);
   } catch (err: unknown) {
     console.log(err);
+  }
+};
+
+export const pickContact = async () => {
+  try {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_CONTACTS
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        return { status: 'denied' };
+      }
+    }
+
+    const contacts = await Contacts.getAll();
+    return { status: 'granted', contacts };
+  } catch (err) {
+    console.log('Contact fetch error:', err);
+    return { status: 'error' };
+  }
+};
+
+export const createVCFAndSend = async (contact: any, onFilePickedUp: (files: any[]) => void) => {
+  try {
+    const defaultName = contact.displayName || `${contact.givenName || ''} ${contact.familyName || ''}`.trim();
+    const name = defaultName || 'Contact';
+    const phone = contact.phoneNumbers?.[0]?.number || '';
+    const email = contact.emailAddresses?.[0]?.email || '';
+    
+    let vcf = `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\n`;
+    if (contact.givenName) vcf += `N:${contact.familyName || ''};${contact.givenName || ''};;;\n`;
+    if (phone) vcf += `TEL;TYPE=CELL:${phone}\n`;
+    if (email) vcf += `EMAIL;TYPE=INTERNET:${email}\n`;
+    vcf += `END:VCARD`;
+
+    const fileName = `${name.replace(/\s+/g, '_') || 'Contact'}.vcf`;
+    const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
+
+    await RNFS.writeFile(filePath, vcf, 'utf8');
+    const fileStat = await RNFS.stat(filePath);
+
+    onFilePickedUp([{
+      uri: Platform.OS === 'android' ? `file://${filePath}` : filePath,
+      name: fileName,
+      size: fileStat.size,
+      type: 'text/vcard',
+    }]);
+  } catch (err) {
+    console.log('VCF creation error:', err);
+  }
+};
+
+export const parseVCF = async (filePath: string) => {
+  try {
+    const content = await RNFS.readFile(filePath.replace('file://', ''), 'utf8');
+    
+    const fnMatch = content.match(/FN:(.*)/i);
+    const name = fnMatch ? fnMatch[1].trim() : 'Unknown Contact';
+    
+    const telMatch = content.match(/TEL;?[^:]*:(.*)/i);
+    const phone = telMatch ? telMatch[1].trim() : '';
+
+    const emailMatch = content.match(/EMAIL;?[^:]*:(.*)/i);
+    const email = emailMatch ? emailMatch[1].trim() : '';
+
+    const orgMatch = content.match(/ORG:(.*)/i);
+    const company = orgMatch ? orgMatch[1].trim() : '';
+
+    return {
+      givenName: name.split(' ')[0] || 'Contact',
+      familyName: name.split(' ').slice(1).join(' ') || '',
+      phoneNumbers: phone ? [{ label: 'mobile', number: phone }] : [],
+      emailAddresses: email ? [{ label: 'work', email: email }] : [],
+      company: company || '',
+    };
+  } catch (err) {
+    console.error('Error parsing VCF:', err);
+    return null;
+  }
+};
+
+export const saveVCFToContacts = async (filePath: string) => {
+  try {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_CONTACTS
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+        Alert.alert('Permission Denied', 'Contacts write permission is required to save.');
+        return;
+      }
+    }
+
+    const contactData = await parseVCF(filePath);
+    if (contactData) {
+      await Contacts.openContactForm(contactData as any);
+    } else {
+      Alert.alert('Error', 'Could not parse vCard file.');
+    }
+  } catch (err) {
+    console.error('Error saving contact:', err);
+    Alert.alert('Error', 'Failed to save contact.');
   }
 };
 

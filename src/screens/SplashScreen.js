@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { navigate } from '../utils/NavigationUtil';
+import DeviceInfo from 'react-native-device-info';
 
 const { width, height } = Dimensions.get('window');
 
@@ -374,7 +375,7 @@ const SplashScreen = () => {
 
       {/* Bottom version text */}
       <Animated.Text style={[styles.version, { opacity: taglineOpacity }]}>
-        v1.0
+        v{DeviceInfo.getVersion()}
       </Animated.Text>
     </LinearGradient>
   );

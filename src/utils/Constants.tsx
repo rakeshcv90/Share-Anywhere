@@ -71,6 +71,45 @@ export const requestPhotoPermission = async () => {
   }
 };
 
+import { PermissionsAndroid } from 'react-native';
+
+export const requestLocationPermission = async () => {
+  try {
+    if (Platform.OS === 'ios') {
+      const permission = PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+      const currentStatus = await check(permission);
+      
+      if (currentStatus === RESULTS.GRANTED) return true;
+      if (currentStatus === RESULTS.BLOCKED) return false;
+      
+      const result = await request(permission);
+      return result === RESULTS.GRANTED;
+    } 
+    
+    if (Platform.OS === 'android') {
+      if (Platform.Version >= 33) {
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+        
+        return result[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] === PermissionsAndroid.RESULTS.GRANTED &&
+               result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED;
+      } else {
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        return result === PermissionsAndroid.RESULTS.GRANTED;
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error requesting location permission:', error);
+    return false;
+  }
+};
+
 export const isBase64 = (str: string) => {
   const base64Regex =
     /^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{2}==|[A-Za-z0-9+\/]{3}=)?$/;
