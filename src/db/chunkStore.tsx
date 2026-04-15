@@ -1,46 +1,3 @@
-
-// import { create } from 'zustand';
-// import { Buffer } from 'buffer';
-
-// interface ChunkState {
-//   chunkStore: {
-//     id: string | null;
-//     name: string;
-//     totalChunks: number;
-//     chunkArray: Buffer[];
-//   } | null;
-
-//   currentChunkSet: {
-//     id: string | null;
-//     totalChunks: number;
-//     chunkArray: Buffer[];
-//   } | null;
-
-//   setChunkStore: (chunkStore: any) => void;
-//   resetChunkStore: () => void;
-
-//   setCurrentChunkSet: (currentChunkSet: any) => void;
-//   resetCurrentChunkSet: () => void;
-// }
-
-// export const useChunkStore = create<ChunkState>(set => ({
-//   chunkStore: null,
-//   currentChunkSet: null,
-
-//   setChunkStore: chunkStore =>
-//     set(() => ({ chunkStore })),
-
-//   resetChunkStore: () =>
-//     set(() => ({ chunkStore: null })),
-
-//   setCurrentChunkSet: currentChunkSet =>
-//     set(() => ({ currentChunkSet })),
-
-//   resetCurrentChunkSet: () =>
-//     set(() => ({ currentChunkSet: null })),
-// }));
-
-
 import { create } from 'zustand';
 import { Buffer } from 'buffer';
 
@@ -49,43 +6,75 @@ import { Buffer } from 'buffer';
 export interface ChunkStoreData {
   id: string | null;
   name: string;
+  size?: any;
+  mimeType?: string;
   totalChunks: number;
   chunkArray: Buffer[];
+  stream?: any;
 }
 
 export interface CurrentChunkSetData {
   id: string | null;
   totalChunks: number;
   chunkArray: Buffer[];
+
+  filePath?: string;
+  fileSize?: number;
+  chunkSize?: number;
+  readStream?: any;
+  fileData?: string;
+  name?: string;
+  lastChunkNo?: number;
 }
 
 interface ChunkState {
   chunkStore: ChunkStoreData | null;
   currentChunkSet: CurrentChunkSetData | null;
+  isPaused: boolean;
+  activeFileTransferredBytes: number;
 
   setChunkStore: (data: ChunkStoreData | null) => void;
   resetChunkStore: () => void;
 
-  setCurrentChunkSet: (data: CurrentChunkSetData | null) => void;
+  setCurrentChunkSet: (data: Partial<CurrentChunkSetData> | null) => void;
   resetCurrentChunkSet: () => void;
+
+  togglePause: () => void;
+  setPaused: (paused: boolean) => void;
+  setActiveFileTransferredBytes: (bytes: number | ((prev: number) => number)) => void;
 }
 
 /* ---------- STORE ---------- */
 
-export const useChunkStore = create<ChunkState>((set) => ({
+export const useChunkStore = create<ChunkState>(set => ({
   chunkStore: null,
   currentChunkSet: null,
+  isPaused: false,
+  activeFileTransferredBytes: 0,
 
-  setChunkStore: (data) =>
-    set({ chunkStore: data }),
+  setChunkStore: data => set({ chunkStore: data }),
 
-  resetChunkStore: () =>
-    set({ chunkStore: null }),
+  resetChunkStore: () => set({ chunkStore: null }),
 
-  setCurrentChunkSet: (data) =>
-    set({ currentChunkSet: data }),
+  setCurrentChunkSet: data =>
+    set(state => ({
+      currentChunkSet:
+        data === null
+          ? null
+          : state.currentChunkSet
+          ? { ...state.currentChunkSet, ...data }
+          : (data as CurrentChunkSetData),
+    })),
 
-  resetCurrentChunkSet: () =>
-    set({ currentChunkSet: null }),
+  resetCurrentChunkSet: () => set({ currentChunkSet: null }),
+
+  togglePause: () => set(state => ({ isPaused: !state.isPaused })),
+  setPaused: (paused: boolean) => set({ isPaused: paused }),
+  setActiveFileTransferredBytes: bytes =>
+    set(state => ({
+      activeFileTransferredBytes:
+        typeof bytes === 'function'
+          ? bytes(state.activeFileTransferredBytes)
+          : bytes,
+    })),
 }));
-

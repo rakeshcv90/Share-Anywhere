@@ -1,14 +1,27 @@
-import { View, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
-import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  Animated,
+  Platform,
+  Dimensions,
+} from 'react-native';
+import React, { useRef, useEffect } from 'react';
 import { navigate } from '../../utils/NavigationUtil';
 import Icon from '../global/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import QRScannerModal from '../modals/QRScannerModal';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTheme } from '../../context/ThemeContext';
+import { useTCP } from '../../service/TCPProvider';
 
-const AbsoluteQRBottom = () => {
-  const [isVisible, setVisible] = useState(false);
+const { width } = Dimensions.get('window');
+const isTablet = width > 600;
+const qrSize = isTablet ? 100 : 50;
+const AbsoluteQRBottom = ({ onScanQR, onShareQR }) => {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const { isConnected } = useTCP();
   const slideUp = useRef(new Animated.Value(80)).current;
   const qrScale = useRef(new Animated.Value(0)).current;
   const qrPulse = useRef(new Animated.Value(1)).current;
@@ -55,73 +68,52 @@ const AbsoluteQRBottom = () => {
         style={[
           styles.container,
           {
-            bottom: insets.bottom || 1,
+            bottom: insets.bottom ? insets.bottom + 10 : 20,
             transform: [{ translateY: slideUp }],
           },
         ]}
       >
-        {/* Glass background */}
-        <View style={styles.glassBg}>
-          {/* Left button */}
+        <View style={[styles.glassBg, { backgroundColor: colors.navBg }]}>
+          {/* Item 1: Home (Active) */}
+          <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+            <Icon name="home" iconFamily="Ionicons" color="#0072FF" size={24} />
+            <Text style={[styles.navText, { color: '#0072FF' }]}>Home</Text>
+          </TouchableOpacity>
+
+          {/* Item 2: Files */}
           <TouchableOpacity
-            style={styles.sideButton}
+            style={styles.navItem}
             onPress={() => navigate('ReceivedFileScreen')}
             activeOpacity={0.7}
           >
-            <Icon
-              name="apps-sharp"
-              iconFamily="Ionicons"
-              color="#4A5568"
-              size={22}
-            />
+            <Icon name="folder-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
+            <Text style={[styles.navText, { color: colors.subtext }]}>Files</Text>
           </TouchableOpacity>
 
-          {/* Center QR button */}
-          <Animated.View
-            style={{
-              transform: [{ scale: Animated.multiply(qrScale, qrPulse) }],
-            }}
-          >
+          {/* Item 3: Connections */}
+          {Platform.OS !== 'ios' && (
             <TouchableOpacity
-              style={styles.qrButton}
-              onPress={() => setVisible(true)}
-              activeOpacity={0.85}
+              style={styles.navItem}
+              onPress={() => navigate(isConnected ? 'ConnectionScreen' : 'ConnectionHubScreen')}
+              activeOpacity={0.7}
             >
-              <LinearGradient
-                colors={['#00D2FF', '#0072FF']}
-                style={styles.qrGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Icon
-                  name="qrcode-scan"
-                  iconFamily="MaterialCommunityIcons"
-                  color="#fff"
-                  size={24}
-                />
-              </LinearGradient>
+              <Icon name="people-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
+              <Text style={[styles.navText, { color: colors.subtext }]}>Network</Text>
             </TouchableOpacity>
-          </Animated.View>
+          )}
 
-          {/* Right button */}
-          <TouchableOpacity
-            style={styles.sideButton}
-            onPress={() => { }}
+
+          {/* Item 4: Profile */}
+          <TouchableOpacity 
+            style={styles.navItem} 
             activeOpacity={0.7}
+            onPress={() => navigate('ProfileScreen')}
           >
-            <Icon
-              name="beer-sharp"
-              iconFamily="Ionicons"
-              color="#4A5568"
-              size={22}
-            />
+            <Icon name="person-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
+            <Text style={[styles.navText, { color: colors.subtext }]}>Profile</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
-
-      {isVisible && (
-        <QRScannerModal visible={isVisible} onClose={() => setVisible(false)} />
-      )}
     </>
   );
 };
@@ -129,57 +121,38 @@ const AbsoluteQRBottom = () => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    paddingBottom: 0,
+    width: width,
+    alignItems: 'center',
   },
-
   glassBg: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 28,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-
-    // Shadow
+    width: isTablet ? 800 : width - 36,
+    height: 62,
+    borderRadius: 31,
+    paddingHorizontal: 0,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 16,
-
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
-  },
-
-  sideButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#F0F4FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  qrButton: {
-    marginTop: -30,
-  },
-
-  qrGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#0072FF',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 10,
-    borderWidth: 3,
-    borderColor: '#fff',
+    shadowOpacity: 0.08,
+    shadowRadius: 15,
+    elevation: 12,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  navItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2, // Tighter gap for shorter bar
+  },
+  navText: {
+    fontSize: 10.5,
+    color: '#718096',
+    fontWeight: '600',
+    fontFamily: 'Okra-Medium',
+    includeFontPadding: false,
+    marginTop: 0, // Perfectly centered
   },
 });
 

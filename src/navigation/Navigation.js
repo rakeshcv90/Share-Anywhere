@@ -9,33 +9,38 @@ import SendScreen from '../screens/SendScreen';
 import ConnectionScreen from '../screens/ConnectionScreen';
 import ReceiveScreen from '../screens/ReceiveScreen';
 import ReceivedFileScreen from '../screens/ReceivedFileScreen';
+import ConnectionHubScreen from '../screens/ConnectionHubScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import { TCPProvider } from '../service/TCPProvider';
+import { ThemeProvider } from '../context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
 const screenOptions = {
   headerShown: false,
-  // animation: 'none',
-  // contentStyle: {
-  //   backgroundColor: 'transparent',
-  // },
 };
+
 const Navigation = () => {
   return (
-    <TCPProvider>
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator
-        initialRouteName="SplashScreen"
-        screenOptions={screenOptions}
-      >
-        <Stack.Screen name="SplashScreen" component={SplashScreen} />
-        <Stack.Screen name="HomeScreen" component={HomeScreen} />
-        <Stack.Screen name="ConnectionScreen" component={ConnectionScreen} />
-        <Stack.Screen name="SendScreen" component={SendScreen} />
-         <Stack.Screen name="ReceiveScreen" component={ReceiveScreen} />
-          <Stack.Screen name="ReceivedFileScreen" component={ReceivedFileScreen} />
-      </Stack.Navigator>
-    </NavigationContainer></TCPProvider>
+    <ThemeProvider>
+      <TCPProvider>
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator
+            initialRouteName="SplashScreen"
+            screenOptions={screenOptions}
+          >
+            <Stack.Screen name="SplashScreen" component={SplashScreen} />
+            <Stack.Screen name="HomeScreen" component={HomeScreen} />
+            <Stack.Screen name="ConnectionScreen" component={ConnectionScreen} />
+            <Stack.Screen name="SendScreen" component={SendScreen} />
+            <Stack.Screen name="ReceiveScreen" component={ReceiveScreen} />
+            <Stack.Screen name="ReceivedFileScreen" component={ReceivedFileScreen} />
+            <Stack.Screen name="ConnectionHubScreen" component={ConnectionHubScreen} />
+            <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </TCPProvider>
+    </ThemeProvider>
   );
 };
 

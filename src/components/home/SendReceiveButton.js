@@ -11,6 +11,7 @@ import React, { useRef, useEffect } from 'react';
 import LinearGradient from 'react-native-linear-gradient';
 import { screenHeight, screenWidth } from '../../utils/Constants';
 import { navigate } from '../../utils/NavigationUtil';
+import Icon from '../global/Icon';
 
 const SendReceiveButton = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,58 +54,56 @@ const SendReceiveButton = () => {
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       {/* SEND */}
       <Animated.View
-        style={{ transform: [{ translateX: sendSlide }, { scale: sendScale }] }}
+        style={[
+          styles.cardWrapper,
+          styles.sendCardGlow,
+          { transform: [{ translateX: sendSlide }, { scale: sendScale }] },
+        ]}
       >
         <TouchableOpacity
           activeOpacity={0.9}
           onPressIn={() => pressIn(sendScale)}
           onPressOut={() => pressOut(sendScale)}
           onPress={() => navigate('SendScreen')}
+          style={styles.touchable}
         >
           <LinearGradient
-            colors={['#42D5FC', '#2196F3', '#1565C0']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={['#0072FF', '#00C6FF']}
             style={styles.card}
           >
-            <View style={styles.iconWrap}>
-              <Image
-                source={require('../../assets/icons/send.png')}
-                style={styles.icon}
-                tintColor="#fff"
-              />
+            <View style={styles.cardContentInner}>
+              <Icon name="arrow-up" iconFamily="Ionicons" size={48} color="#C4E0FF" />
+              <Text style={styles.label}>Send</Text>
+              <Text style={styles.sublabel}>Send File</Text>
             </View>
-            <Text style={styles.label}>Send</Text>
-            <Text style={styles.sublabel}>Share files</Text>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
 
       {/* RECEIVE */}
       <Animated.View
-        style={{ transform: [{ translateX: receiveSlide }, { scale: receiveScale }] }}
+        style={[
+          styles.cardWrapper,
+          styles.receiveCardGlow,
+          { transform: [{ translateX: receiveSlide }, { scale: receiveScale }] },
+        ]}
       >
         <TouchableOpacity
           activeOpacity={0.9}
           onPressIn={() => pressIn(receiveScale)}
           onPressOut={() => pressOut(receiveScale)}
           onPress={() => navigate('ReceiveScreen')}
+          style={styles.touchable}
         >
           <LinearGradient
-            colors={['#CE93D8', '#9C27B0', '#6A1B9A']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={['#56CCF2', '#2F80ED']}
             style={styles.card}
           >
-            <View style={styles.iconWrap}>
-              <Image
-                source={require('../../assets/icons/inbox.png')}
-                style={styles.icon}
-                tintColor="#fff"
-              />
+            <View style={styles.cardContentInner}>
+              <Icon name="arrow-down" iconFamily="Ionicons" size={48} color="#D1E9FF" />
+              <Text style={styles.label}>Receive</Text>
+              <Text style={styles.sublabel}>Receive File</Text>
             </View>
-            <Text style={styles.label}>Receive</Text>
-            <Text style={styles.sublabel}>Get files</Text>
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -116,52 +115,61 @@ export default SendReceiveButton;
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 8,
+    marginTop: 15, // Better breathing gap
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: 12,
+    justifyContent: 'space-between', // Absolute alignment with grid edges
+    paddingHorizontal: 18, // Sync with grid padding
   },
 
+  cardWrapper: {
+    width: '47.5%', // Near-perfect match for 48.5% grid alignment
+    height: 165,
+    borderRadius: 32,
+    backgroundColor: 'transparent',
+  },
+  touchable: {
+    flex: 1,
+  },
   card: {
-    width: screenWidth * 0.42,
-    height: 130,
-    borderRadius: 22,
+    flex: 1,
+    borderRadius: 32,
+    borderWidth: 0.8,
+    borderColor: 'rgba(255,255,255,0.3)',
+    overflow: 'hidden',
+  },
+  cardContentInner: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 10,
+    padding: 10,
+    gap: 4,
   },
-
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-
-  icon: {
-    width: 26,
-    height: 26,
-    resizeMode: 'contain',
-  },
-
   label: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 20,
+    fontWeight: '900',
+    fontFamily: 'Okra-Bold',
+    includeFontPadding: false,
   },
-
   sublabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 2,
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Okra-Medium',
+    includeFontPadding: false,
+  },
+  sendCardGlow: {
+    shadowColor: '#0072FF',
+    shadowOpacity: 0.55,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  receiveCardGlow: {
+    shadowColor: '#2F80ED',
+    shadowOpacity: 0.55,
+    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 20,
+    elevation: 12,
   },
 });

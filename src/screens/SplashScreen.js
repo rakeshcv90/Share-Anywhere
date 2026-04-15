@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { navigate } from '../utils/NavigationUtil';
+import DeviceInfo from 'react-native-device-info';
 
 const { width, height } = Dimensions.get('window');
 
@@ -227,7 +228,11 @@ const SplashScreen = () => {
       start={{ x: 0, y: 0 }}
       end={{ x: 0.5, y: 1 }}
     >
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
 
       {/* Rising particles */}
       {particleAnims.map((particle, i) => (
@@ -324,7 +329,7 @@ const SplashScreen = () => {
           end={{ x: 1, y: 1 }}
         >
           <Image
-            source={require('../assets/images/logo.png')}
+            source={require('../assets/icons/new.png')}
             style={styles.logo}
           />
         </LinearGradient>
@@ -340,7 +345,7 @@ const SplashScreen = () => {
           },
         ]}
       >
-        ShareIt
+        Share Anywhere
       </Animated.Text>
 
       {/* Tagline */}
@@ -370,7 +375,7 @@ const SplashScreen = () => {
 
       {/* Bottom version text */}
       <Animated.Text style={[styles.version, { opacity: taglineOpacity }]}>
-        v1.0
+        v{DeviceInfo.getVersion()}
       </Animated.Text>
     </LinearGradient>
   );
@@ -442,11 +447,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     resizeMode: 'contain',
+    borderRadius: 16,
   },
 
   appName: {
     color: '#fff',
-    fontSize: 40,
+    fontSize: 30,
     fontFamily: 'Okra-Bold',
     letterSpacing: 3,
     textShadowColor: 'rgba(0,114,255,0.5)',
