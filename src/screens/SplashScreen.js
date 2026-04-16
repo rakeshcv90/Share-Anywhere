@@ -11,6 +11,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { navigate } from '../utils/NavigationUtil';
 import DeviceInfo from 'react-native-device-info';
+import { authStorage } from '../db/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -198,9 +199,13 @@ const SplashScreen = () => {
       loop();
     });
 
-    // Navigate to home
+    // Navigate based on auth state
     const timeout = setTimeout(() => {
-      navigate('HomeScreen');
+      if (authStorage.isLoggedIn()) {
+        navigate('HomeScreen');
+      } else {
+        navigate('LoginScreen');
+      }
     }, 3500);
 
     return () => clearTimeout(timeout);
@@ -329,7 +334,7 @@ const SplashScreen = () => {
           end={{ x: 1, y: 1 }}
         >
           <Image
-            source={require('../assets/icons/new.png')}
+            source={require('../assets/icons/app_logo.png')}
             style={styles.logo}
           />
         </LinearGradient>

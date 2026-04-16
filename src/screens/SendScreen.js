@@ -29,14 +29,18 @@ import {
   getLocalIPAddress,
 } from '../utils/networkUtils';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
+import UpgradePromptModal from '../components/modals/UpgradePromptModal';
 
 const { width, height } = Dimensions.get('window');
 
 const SendScreen = () => {
   const { isConnected, connectToServer } = useTCP();
   const { colors, isDark } = useTheme();
+  const { canConnectUser } = useSubscription();
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [nearbyDevices, setNearbyDevices] = useState([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -173,6 +177,13 @@ const SendScreen = () => {
   const handleScan = data => {
     const [connectionData, deviceName] = data.replace('tcp://', '').split('|');
     const [host, port] = connectionData.split(':');
+
+    // Check subscription user limit before connecting
+    if (!canConnectUser(nearbyDevices.length)) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     connectToServer(host, parseInt(port, 10), deviceName);
   };
 
@@ -699,6 +710,12 @@ const SendScreen = () => {
           onScan={handleScan}
         />
       )}
+
+      <UpgradePromptModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        type="user_limit"
+      />
     </>
   );
 };
