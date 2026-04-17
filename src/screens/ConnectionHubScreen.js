@@ -30,7 +30,7 @@ const ConnectionHubScreen = () => {
   const [currentSSID, setCurrentSSID] = useState('');
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [locationError, setLocationError] = useState(false);
-  
+
   // Custom prompt state since Alert.prompt does not work on Android
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptSSID, setPromptSSID] = useState('');
@@ -54,17 +54,21 @@ const ConnectionHubScreen = () => {
           PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES,
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         ]);
-        
+
         granted =
-          result[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] === PermissionsAndroid.RESULTS.GRANTED &&
-          result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED;
-          
+          result[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] ===
+            PermissionsAndroid.RESULTS.GRANTED &&
+          result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
+            PermissionsAndroid.RESULTS.GRANTED;
+
         blocked =
-          result[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN ||
-          result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+          result[PermissionsAndroid.PERMISSIONS.NEARBY_WIFI_DEVICES] ===
+            PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN ||
+          result[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] ===
+            PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
       } else {
         const result = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         );
         granted = result === PermissionsAndroid.RESULTS.GRANTED;
         blocked = result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
@@ -78,11 +82,11 @@ const ConnectionHubScreen = () => {
         if (blocked) {
           Alert.alert(
             'Permission Required',
-            'Share Anywhere needs Nearby Devices and Location permissions to find other phones. Please enable them in Settings.',
+            'TransferQueen needs Nearby Devices and Location permissions to find other phones. Please enable them in Settings.',
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => Linking.openSettings() }
-            ]
+              { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            ],
           );
         }
       }
@@ -110,7 +114,7 @@ const ConnectionHubScreen = () => {
       setScanning(true);
       const wifiList = await WifiManager.loadWifiList();
       setLocationError(false);
-      
+
       const sorted = (wifiList || [])
         .filter(n => n.SSID && n.SSID.trim() !== '')
         .sort((a, b) => b.level - a.level);
@@ -118,7 +122,10 @@ const ConnectionHubScreen = () => {
     } catch (e) {
       console.log('WiFi scan error:', e);
       const errMsg = String(e).toLowerCase();
-      if (errMsg.includes('location service') || errMsg.includes('location provider')) {
+      if (
+        errMsg.includes('location service') ||
+        errMsg.includes('location provider')
+      ) {
         setLocationError(true);
       } else {
         setLocationError(false);
@@ -129,7 +136,7 @@ const ConnectionHubScreen = () => {
     }
   };
 
-  const isSecure = (capabilities) => {
+  const isSecure = capabilities => {
     return (
       capabilities &&
       (capabilities.includes('WPA') ||
@@ -138,9 +145,9 @@ const ConnectionHubScreen = () => {
     );
   };
 
-  const handleNetworkPress = async (item) => {
+  const handleNetworkPress = async item => {
     const secure = isSecure(item.capabilities);
-    
+
     if (secure) {
       setPromptSSID(item.SSID);
       setPromptPassword('');
@@ -169,7 +176,12 @@ const ConnectionHubScreen = () => {
     setConnecting(promptSSID);
     try {
       if (promptPassword && promptPassword.length > 0) {
-        await WifiManager.connectToProtectedSSID(promptSSID, promptPassword, false, false);
+        await WifiManager.connectToProtectedSSID(
+          promptSSID,
+          promptPassword,
+          false,
+          false,
+        );
       } else {
         await WifiManager.connectToSSID(promptSSID);
       }
@@ -177,7 +189,10 @@ const ConnectionHubScreen = () => {
       Alert.alert('Connected!', `Successfully connected to ${promptSSID}`);
       scanNetworks();
     } catch (err) {
-      Alert.alert('Failed', `Could not connect to ${promptSSID}. Check password.`);
+      Alert.alert(
+        'Failed',
+        `Could not connect to ${promptSSID}. Check password.`,
+      );
     } finally {
       setConnecting(null);
     }
@@ -211,30 +226,56 @@ const ConnectionHubScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? colors.surface : '#fff', borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: isDark ? colors.surface : '#fff',
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <View style={[styles.backIconBox, { backgroundColor: colors.border }]}>
-            <Icon name="chevron-back" size={20} color={colors.text} iconFamily="Ionicons" />
+          <View
+            style={[styles.backIconBox, { backgroundColor: colors.border }]}
+          >
+            <Icon
+              name="chevron-back"
+              size={20}
+              color={colors.text}
+              iconFamily="Ionicons"
+            />
           </View>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Network Hub</Text>
-        <TouchableOpacity 
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Network Hub
+        </Text>
+        <TouchableOpacity
           activeOpacity={0.8}
           onPress={scanNetworks}
           style={styles.refreshButton}
           disabled={scanning}
         >
-          <View style={[styles.backIconBox, { backgroundColor: colors.border }]}>
+          <View
+            style={[styles.backIconBox, { backgroundColor: colors.border }]}
+          >
             {scanning ? (
               <ActivityIndicator size="small" color={colors.accent} />
             ) : (
-              <Icon name="refresh" size={20} color={colors.text} iconFamily="Ionicons" />
+              <Icon
+                name="refresh"
+                size={20}
+                color={colors.text}
+                iconFamily="Ionicons"
+              />
             )}
           </View>
         </TouchableOpacity>
@@ -244,39 +285,79 @@ const ConnectionHubScreen = () => {
         {scanning && networks.length === 0 ? (
           <View style={styles.centerState}>
             <ActivityIndicator size="large" color={colors.accent} />
-            <Text style={[styles.stateText, { color: colors.subtext, marginTop: 16 }]}>Searching for devices...</Text>
+            <Text
+              style={[
+                styles.stateText,
+                { color: colors.subtext, marginTop: 16 },
+              ]}
+            >
+              Searching for devices...
+            </Text>
           </View>
         ) : networks.length === 0 ? (
           <View style={styles.centerState}>
-            <View style={[styles.messageBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.messageBox,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               {Platform.OS === 'ios' ? (
                 <>
-                  <Icon name="logo-apple" size={48} color={colors.text} iconFamily="Ionicons" />
-                  <Text style={[styles.messageTitle, { color: colors.text }]}>iOS Wi-Fi Limitation</Text>
+                  <Icon
+                    name="logo-apple"
+                    size={48}
+                    color={colors.text}
+                    iconFamily="Ionicons"
+                  />
+                  <Text style={[styles.messageTitle, { color: colors.text }]}>
+                    iOS Wi-Fi Limitation
+                  </Text>
                   <Text style={[styles.messageSub, { color: colors.subtext }]}>
-                    Apple does not allow apps to automatically scan nearby Wi-Fi networks. 
+                    Apple does not allow apps to automatically scan nearby Wi-Fi
+                    networks.
                   </Text>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => {
-                       setPromptSSID('');
-                       setPromptPassword('');
-                       setPromptVisible(true);
+                      setPromptSSID('');
+                      setPromptPassword('');
+                      setPromptVisible(true);
                     }}
-                    style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+                    style={[
+                      styles.primaryBtn,
+                      { backgroundColor: colors.accent },
+                    ]}
                   >
                     <Text style={styles.primaryBtnText}>Manual Connection</Text>
                   </TouchableOpacity>
-                  <Text style={[{ color: colors.subtext, fontSize: 11, marginTop: 15, textAlign: 'center' }]}>
+                  <Text
+                    style={[
+                      {
+                        color: colors.subtext,
+                        fontSize: 11,
+                        marginTop: 15,
+                        textAlign: 'center',
+                      },
+                    ]}
+                  >
                     Enter the Android device's Hotspot name manually.
                   </Text>
                 </>
               ) : locationError ? (
                 <>
-                  <Icon name="location-off" size={48} color="#F59E0B" iconFamily="MaterialIcons" />
-                  <Text style={[styles.messageTitle, { color: colors.text }]}>Location is Off</Text>
+                  <Icon
+                    name="location-off"
+                    size={48}
+                    color="#F59E0B"
+                    iconFamily="MaterialIcons"
+                  />
+                  <Text style={[styles.messageTitle, { color: colors.text }]}>
+                    Location is Off
+                  </Text>
                   <Text style={[styles.messageSub, { color: colors.subtext }]}>
-                    Android requires Location Services to scan for nearby Wi-Fi devices.
+                    Android requires Location Services to scan for nearby Wi-Fi
+                    devices.
                   </Text>
                   <TouchableOpacity
                     activeOpacity={0.8}
@@ -288,29 +369,46 @@ const ConnectionHubScreen = () => {
                 </>
               ) : (
                 <>
-                  <Icon name="wifi-outline" size={48} color={colors.accent} iconFamily="Ionicons" />
-                  <Text style={[styles.messageTitle, { color: colors.text }]}>No Devices Found</Text>
+                  <Icon
+                    name="wifi-outline"
+                    size={48}
+                    color={colors.accent}
+                    iconFamily="Ionicons"
+                  />
+                  <Text style={[styles.messageTitle, { color: colors.text }]}>
+                    No Devices Found
+                  </Text>
                   <Text style={[styles.messageSub, { color: colors.subtext }]}>
                     Make sure the other phone has Wi-Fi or Hotspot active.
                   </Text>
                   <TouchableOpacity
-                     activeOpacity={0.8}
-                     onPress={scanNetworks}
-                     style={[styles.primaryBtn, { backgroundColor: colors.accent, marginBottom: 10 }]}
-                   >
-                     <Text style={styles.primaryBtnText}>Retry Scan</Text>
-                   </TouchableOpacity>
-                   <TouchableOpacity
-                     activeOpacity={0.8}
-                     onPress={() => {
-                        setPromptSSID('');
-                        setPromptPassword('');
-                        setPromptVisible(true);
-                     }}
-                     style={[styles.primaryBtn, { backgroundColor: colors.border }]}
-                   >
-                     <Text style={[styles.primaryBtnText, { color: colors.text }]}>Manual Connect</Text>
-                   </TouchableOpacity>
+                    activeOpacity={0.8}
+                    onPress={scanNetworks}
+                    style={[
+                      styles.primaryBtn,
+                      { backgroundColor: colors.accent, marginBottom: 10 },
+                    ]}
+                  >
+                    <Text style={styles.primaryBtnText}>Retry Scan</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setPromptSSID('');
+                      setPromptPassword('');
+                      setPromptVisible(true);
+                    }}
+                    style={[
+                      styles.primaryBtn,
+                      { backgroundColor: colors.border },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.primaryBtnText, { color: colors.text }]}
+                    >
+                      Manual Connect
+                    </Text>
+                  </TouchableOpacity>
                 </>
               )}
             </View>
@@ -322,28 +420,69 @@ const ConnectionHubScreen = () => {
             contentContainerStyle={styles.listContainer}
             ListHeaderComponent={() => (
               <View style={{ marginBottom: 24 }}>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Devices</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Available Devices
+                </Text>
                 <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
                   <TouchableOpacity
-                    style={[styles.quickBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    style={[
+                      styles.quickBtn,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
                     onPress={() => Linking.openSettings()}
                   >
-                    <View style={[styles.iconCirc, { backgroundColor: '#3B82F615' }]}>
-                      <Icon name="settings-outline" size={20} color="#3B82F6" iconFamily="Ionicons" />
+                    <View
+                      style={[
+                        styles.iconCirc,
+                        { backgroundColor: '#3B82F615' },
+                      ]}
+                    >
+                      <Icon
+                        name="settings-outline"
+                        size={20}
+                        color="#3B82F6"
+                        iconFamily="Ionicons"
+                      />
                     </View>
-                    <Text style={[styles.quickText, { color: colors.text }]}>Settings</Text>
+                    <Text style={[styles.quickText, { color: colors.text }]}>
+                      Settings
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.quickBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    style={[
+                      styles.quickBtn,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
                     onPress={() => {
-                        try { Linking.sendIntent('android.settings.WIFI_SETTINGS'); } 
-                        catch (e) { Linking.openSettings(); }
+                      try {
+                        Linking.sendIntent('android.settings.WIFI_SETTINGS');
+                      } catch (e) {
+                        Linking.openSettings();
+                      }
                     }}
                   >
-                    <View style={[styles.iconCirc, { backgroundColor: '#10B98115' }]}>
-                      <Icon name="wifi-outline" size={20} color="#10B981" iconFamily="Ionicons" />
+                    <View
+                      style={[
+                        styles.iconCirc,
+                        { backgroundColor: '#10B98115' },
+                      ]}
+                    >
+                      <Icon
+                        name="wifi-outline"
+                        size={20}
+                        color="#10B981"
+                        iconFamily="Ionicons"
+                      />
                     </View>
-                    <Text style={[styles.quickText, { color: colors.text }]}>Wi-Fi</Text>
+                    <Text style={[styles.quickText, { color: colors.text }]}>
+                      Wi-Fi
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -355,17 +494,23 @@ const ConnectionHubScreen = () => {
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => !isConnected && handleNetworkPress(item)}
-                  style={[styles.networkCard, { 
-                    backgroundColor: colors.surface, 
-                    borderColor: isConnected ? colors.accent : colors.border,
-                    borderWidth: isConnected ? 1.5 : 1,
-                    marginBottom: 12 
-                  }]}
+                  style={[
+                    styles.networkCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: isConnected ? colors.accent : colors.border,
+                      borderWidth: isConnected ? 1.5 : 1,
+                      marginBottom: 12,
+                    },
+                  ]}
                 >
                   <View style={styles.networkLeft}>
                     {renderSignalBars(item.level)}
                     <View style={styles.networkInfo}>
-                      <Text style={[styles.ssid, { color: colors.text }]} numberOfLines={1}>
+                      <Text
+                        style={[styles.ssid, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
                         {item.SSID || 'Unknown Phone'}
                       </Text>
                       <View style={styles.networkMeta}>
@@ -375,21 +520,34 @@ const ConnectionHubScreen = () => {
                           </View>
                         )}
                         <Text style={[styles.freq, { color: colors.subtext }]}>
-                          {item.frequency > 4000 ? '5GHz' : '2.4GHz'} • {Math.abs(item.level)}dBm
+                          {item.frequency > 4000 ? '5GHz' : '2.4GHz'} •{' '}
+                          {Math.abs(item.level)}dBm
                         </Text>
                       </View>
                     </View>
                   </View>
-                  
+
                   {isConnecting ? (
                     <ActivityIndicator size="small" color={colors.accent} />
                   ) : (
                     <TouchableOpacity
-                      style={[styles.connectBtn, { backgroundColor: isConnected ? colors.border : colors.accent }]}
+                      style={[
+                        styles.connectBtn,
+                        {
+                          backgroundColor: isConnected
+                            ? colors.border
+                            : colors.accent,
+                        },
+                      ]}
                       onPress={() => handleNetworkPress(item)}
                       disabled={isConnected}
                     >
-                      <Text style={[styles.connectBtnText, { color: isConnected ? colors.text : '#fff' }]}>
+                      <Text
+                        style={[
+                          styles.connectBtnText,
+                          { color: isConnected ? colors.text : '#fff' },
+                        ]}
+                      >
                         {isConnected ? 'Active' : 'Connect'}
                       </Text>
                     </TouchableOpacity>
@@ -412,25 +570,45 @@ const ConnectionHubScreen = () => {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.modalIcon, { backgroundColor: colors.accent + '15' }]}>
-              <Icon name="lock-closed-outline" size={28} color={colors.accent} iconFamily="Ionicons" />
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalIcon,
+                { backgroundColor: colors.accent + '15' },
+              ]}
+            >
+              <Icon
+                name="lock-closed-outline"
+                size={28}
+                color={colors.accent}
+                iconFamily="Ionicons"
+              />
             </View>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Enter Password</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Enter Password
+            </Text>
             <Text style={[styles.modalSub, { color: colors.subtext }]}>
-              {promptSSID 
+              {promptSSID
                 ? `Please enter the password for "${promptSSID}"`
                 : 'Please enter the exact Hotspot Name and Password of the Android device.'}
             </Text>
-            
+
             {!promptSSID && (
               <TextInput
-                style={[styles.modalInput, { 
-                  backgroundColor: colors.background, 
-                  borderColor: colors.border,
-                  color: colors.text,
-                  marginBottom: 12
-                }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                    marginBottom: 12,
+                  },
+                ]}
                 placeholder="Hotspot Name (SSID)"
                 placeholderTextColor={colors.subtext}
                 value={promptSSID}
@@ -440,12 +618,15 @@ const ConnectionHubScreen = () => {
             )}
 
             <TextInput
-              style={[styles.modalInput, { 
-                backgroundColor: colors.background, 
-                borderColor: colors.border,
-                color: colors.text,
-                marginBottom: 24
-              }]}
+              style={[
+                styles.modalInput,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text,
+                  marginBottom: 24,
+                },
+              ]}
               placeholder="Password"
               placeholderTextColor={colors.subtext}
               secureTextEntry
@@ -459,13 +640,21 @@ const ConnectionHubScreen = () => {
                 style={[styles.modalBtn, { backgroundColor: colors.border }]}
                 onPress={() => setPromptVisible(false)}
               >
-                <Text style={[styles.modalBtnText, { color: colors.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnText, { color: colors.text }]}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.modalBtnPrimary, { backgroundColor: colors.accent }]}
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  { backgroundColor: colors.accent },
+                ]}
                 onPress={handleConnectWithPassword}
               >
-                <Text style={[styles.modalBtnText, { color: '#fff' }]}>Connect</Text>
+                <Text style={[styles.modalBtnText, { color: '#fff' }]}>
+                  Connect
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

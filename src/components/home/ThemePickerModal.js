@@ -119,7 +119,11 @@ const ThemePickerModal = ({ visible, onClose }) => {
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              paddingBottom: insets.bottom ? insets.bottom + 16 : (Platform.OS === 'ios' ? 42 : 28),
+              paddingBottom: insets.bottom
+                ? insets.bottom + 16
+                : Platform.OS === 'ios'
+                ? 42
+                : 28,
               opacity: contentOpacity,
               transform: [{ translateY: slideAnim }],
             },
@@ -135,12 +139,18 @@ const ThemePickerModal = ({ visible, onClose }) => {
                 Appearance
               </Text>
               <Text style={[styles.subtitle, { color: colors.subtext }]}>
-                Choose how Share Anywhere looks
+                Choose how TransferQueen looks
               </Text>
             </View>
             <TouchableOpacity
               onPress={handleClose}
-              style={[styles.closeBtn, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+              style={[
+                styles.closeBtn,
+                {
+                  backgroundColor: colors.surfaceAlt,
+                  borderColor: colors.border,
+                },
+              ]}
             >
               <Icon
                 name="close"

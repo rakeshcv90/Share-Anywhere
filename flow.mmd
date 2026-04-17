@@ -1,0 +1,32 @@
+flowchart TD
+    A["App Launch → Splash Screen"] --> B{"Auth Token Exists?"}
+    B -- Yes --> C{"Token Valid?"}
+    B -- No --> D["Login / Signup Screen"]
+    C -- Yes --> E["Home Screen"]
+    C -- No --> D
+    D -- "Login Success" --> E
+    D -- "Signup Success" --> E
+    
+    E --> F["User taps Send / Receive"]
+    F --> G{"Has active subscription?"}
+    
+    G -- "No subscription" --> H{"Is this the 1st file?"}
+    H -- "Yes (free)" --> I["Allow Transfer ✅"]
+    H -- "No (2nd+ file)" --> J["Show Subscription Paywall 🔒"]
+    
+    G -- "Basic Plan" --> K{"Connected users ≤ 3?"}
+    K -- Yes --> I
+    K -- "No (4th+ user)" --> L["Show Upgrade Prompt"]
+    
+    G -- "Pro Plan" --> I
+    
+    J --> M["User Buys Plan"]
+    L --> M
+    M --> I
+    
+    style A fill:#0D1B2A,stroke:#00D2FF,color:#fff
+    style D fill:#1E3A5F,stroke:#0072FF,color:#fff
+    style J fill:#FF6B6B,stroke:#FF4444,color:#fff
+    style L fill:#FF6B6B,stroke:#FF4444,color:#fff
+    style I fill:#10B981,stroke:#059669,color:#fff
+    style M fill:#F59E0B,stroke:#D97706,color:#fff

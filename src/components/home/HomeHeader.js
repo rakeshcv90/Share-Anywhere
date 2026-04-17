@@ -24,8 +24,16 @@ const HomeHeader = ({ onPressProfile }) => {
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(wifiPulse, { toValue: 1.25, duration: 900, useNativeDriver: true }),
-        Animated.timing(wifiPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(wifiPulse, {
+          toValue: 1.25,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wifiPulse, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
       ]),
     ).start();
   }, []);
@@ -50,13 +58,15 @@ const HomeHeader = ({ onPressProfile }) => {
                     end={{ x: 1, y: 1 }}
                     style={styles.saBox}
                   >
-                    <Text style={styles.logoText}>SA</Text>
+                    <Text style={styles.logoText}>TQ</Text>
                   </LinearGradient>
                   {/* Animated wave icon */}
                   <Animated.View
                     style={[
                       styles.waveIconWrapper,
-                      { transform: [{ scale: wifiPulse }, { rotate: '45deg' }] },
+                      {
+                        transform: [{ scale: wifiPulse }, { rotate: '45deg' }],
+                      },
                     ]}
                   >
                     <Icon
@@ -70,9 +80,11 @@ const HomeHeader = ({ onPressProfile }) => {
               </View>
 
               <View style={styles.titleColumn}>
-                <Text style={[styles.appName, { color: colors.text }]}>Share</Text>
+                <Text style={[styles.appName, { color: colors.text }]}>
+                  Transfer
+                </Text>
                 <Text style={[styles.anywhereText, { color: colors.subtext }]}>
-                  Anywhere
+                  Queen
                 </Text>
               </View>
             </View>
