@@ -20,6 +20,8 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		97131FF7DDDD41128080B5DF /* Okra-MediumLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 737B70EF1FD342359B57C6AE /* Okra-MediumLight.ttf */; };
+		A5E8B6FB2F923C55001FCA5D /* LaunchScreen 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */; };
+		A5E8B6FD2F923C5D001FCA5D /* Info 2.plist in Resources */ = {isa = PBXBuildFile; fileRef = A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */; };
 		A63ED3F4D9C5690616C8B74E /* TurboTransferModule.m in Sources */ = {isa = PBXBuildFile; fileRef = F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */; };
 		F2C2ED98B2BA43EA9CE56CFB /* Okra-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = F514E8368CBA44C08ADED8FA /* Okra-Bold.ttf */; };
 		F552C523C025F7D98B2E2368 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
@@ -69,6 +71,8 @@
 		8F183FB20A60D7E18081DFD7 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		93422CFD3158BF522FAF8951 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97C79CF40BC8D85A57F9593A /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "LaunchScreen 2.storyboard"; sourceTree = "<group>"; };
+		A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info 2.plist"; sourceTree = "<group>"; };
 		B29F6F3E4873283F1A7C64C5 /* libPods-ShareExtension.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ShareExtension.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD2A466AEC884A2C850A1505 /* Okra-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-Medium.ttf"; path = "../src/assets/fonts/Okra-Medium.ttf"; sourceTree = "<group>"; };
 		BFFADC4C6B4642488BAA5469 /* Okra-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Okra-ExtraBold.ttf"; path = "../src/assets/fonts/Okra-ExtraBold.ttf"; sourceTree = "<group>"; };
@@ -110,6 +114,8 @@
 				0D7AFFF514B5B2DA002F9C5D /* SHareIt.entitlements */,
 				2DA7A5B9BA5C697D2232F4AA /* TurboTransferModule.swift */,
 				F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */,
+				A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */,
+				A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */,
 			);
 			path = SHareIt;
 			sourceTree = "<group>";
@@ -290,9 +296,11 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				291BCA5F652F463CBE73CFF4 /* Okra-Medium.ttf in Resources */,
 				143E1ABA434E42469281AC8B /* Okra-ExtraBold.ttf in Resources */,
+				A5E8B6FB2F923C55001FCA5D /* LaunchScreen 2.storyboard in Resources */,
 				97131FF7DDDD41128080B5DF /* Okra-MediumLight.ttf in Resources */,
 				2AD174811B9D43F69DF043C5 /* Okra-Regular.ttf in Resources */,
 				F2C2ED98B2BA43EA9CE56CFB /* Okra-Bold.ttf in Resources */,
+				A5E8B6FD2F923C5D001FCA5D /* Info 2.plist in Resources */,
 				F552C523C025F7D98B2E2368 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -468,7 +476,7 @@
 				CODE_SIGN_ENTITLEMENTS = SHareIt/SHareIt.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 4P2UTHTKB7;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = SHareIt/Info.plist;
@@ -477,7 +485,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -504,7 +512,7 @@
 				CODE_SIGN_ENTITLEMENTS = SHareIt/SHareIt.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 4P2UTHTKB7;
 				INFOPLIST_FILE = SHareIt/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -512,7 +520,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

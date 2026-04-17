@@ -342,7 +342,7 @@ const ReceiveScreen = () => {
                             onLayout={() => {}}
                             numberOfLines={1}
                           >
-                            SA
+                            TQ
                           </CustomeText>
                         </LinearGradient>
                         <Animated.View
