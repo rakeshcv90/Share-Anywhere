@@ -14,6 +14,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import { TCPProvider } from '../service/TCPProvider';
 import { ThemeProvider } from '../context/ThemeContext';
 import { AuthProvider } from '../context/AuthContext';
@@ -39,6 +40,7 @@ const Navigation = () => {
                 <Stack.Screen name="SplashScreen" component={SplashScreen} />
                 <Stack.Screen name="LoginScreen" component={LoginScreen} />
                 <Stack.Screen name="SignupScreen" component={SignupScreen} />
+                <Stack.Screen name="ForgotPasswordScreen" component={ForgotPasswordScreen} />
                 <Stack.Screen name="SubscriptionScreen" component={SubscriptionScreen} />
                 <Stack.Screen name="HomeScreen" component={HomeScreen} />
                 <Stack.Screen name="ConnectionScreen" component={ConnectionScreen} />

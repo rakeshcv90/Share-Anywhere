@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Share Anywhere</string>
+	<string>TransferQueen</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -63,27 +63,27 @@
 		<true/>
 	</dict>
 	<key>NSAppleMusicUsageDescription</key>
-	<string>Share Anywhere needs access to your Apple Music and media library to allow you to select and securely transfer audio files to nearby devices.</string>
+	<string>TransferQueen needs access to your Apple Music and media library to allow you to select and securely transfer audio files to nearby devices.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_tcp._tcp</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Share Anywhere uses your camera to scan QR codes to connect with nearby devices and to capture photos or videos you want to share. For example, you can scan a QR code displayed on another device to instantly establish a peer-to-peer connection for file sharing.</string>
+	<string>TransferQueen uses your camera to scan QR codes to connect with nearby devices and to capture photos or videos you want to share. For example, you can scan a QR code displayed on another device to instantly establish a peer-to-peer connection for file sharing.</string>
 	<key>NSContactsUsageDescription</key>
-	<string>Share Anywhere requires access to your contacts to allow you to select and share contact details with nearby devices over a direct peer-to-peer connection. For example, you can send a business card or contact info to a friend's phone instantly.</string>
+	<string>TransferQueen requires access to your contacts to allow you to select and share contact details with nearby devices over a direct peer-to-peer connection. For example, you can send a business card or contact info to a friend's phone instantly.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>Share Anywhere accesses your Documents folder to let you select files to share with nearby devices and to save files received from others. For example, you can pick a PDF from your Documents folder and send it wirelessly to a nearby contact.</string>
+	<string>TransferQueen accesses your Documents folder to let you select files to share with nearby devices and to save files received from others. For example, you can pick a PDF from your Documents folder and send it wirelessly to a nearby contact.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Share Anywhere uses your local network to discover and connect to nearby devices for direct peer-to-peer file sharing without the internet. For example, it finds other phones on the same Wi-Fi network so you can instantly send photos, videos, or documents to them.</string>
+	<string>TransferQueen uses your local network to discover and connect to nearby devices for direct peer-to-peer file sharing without the internet. For example, it finds other phones on the same Wi-Fi network so you can instantly send photos, videos, or documents to them.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Share Anywhere uses location services to help discover nearby devices on the same network for fast file sharing.</string>
+	<string>TransferQueen uses location services to help discover nearby devices on the same network for fast file sharing.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Share Anywhere requires microphone access for video recording and camera functionality.</string>
+	<string>TransferQueen requires microphone access for video recording and camera functionality.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Share Anywhere saves photos and videos received from nearby devices directly to your photo library. For example, when a contact sends you an image over a peer-to-peer connection, it will be saved to your Photos app.</string>
+	<string>TransferQueen saves photos and videos received from nearby devices directly to your photo library. For example, when a contact sends you an image over a peer-to-peer connection, it will be saved to your Photos app.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Share Anywhere accesses your photo library so you can select photos and videos to share wirelessly with nearby devices. For example, you can pick multiple photos and send them to a friend's device without using mobile data or the internet.</string>
+	<string>TransferQueen accesses your photo library so you can select photos and videos to share wirelessly with nearby devices. For example, you can pick multiple photos and send them to a friend's device without using mobile data or the internet.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

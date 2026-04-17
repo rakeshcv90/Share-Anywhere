@@ -19,23 +19,23 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from '../components/global/Icon';
 import { useTheme } from '../context/ThemeContext';
-import { useAuth } from '../context/AuthContext';
 import { navigate } from '../utils/NavigationUtil';
 
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const { colors, isDark } = useTheme();
-  const { login } = useAuth();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {},
-  );
+  const [errors, setErrors] = useState({});
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
+
+  const passwordRef = useRef(null);
 
   // Animations
   const logoScale = useRef(new Animated.Value(0.5)).current;
@@ -195,7 +195,7 @@ const LoginScreen = () => {
   }, []);
 
   const validate = () => {
-    const newErrors: { email?: string; password?: string } = {};
+    const newErrors = {};
     if (!email.trim()) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
@@ -215,34 +215,20 @@ const LoginScreen = () => {
     if (!validate()) return;
 
     setIsLoading(true);
-    try {
-      const result = await login(email.trim(), password);
-      if (result.success) {
-        navigate('HomeScreen');
-      } else {
-        Alert.alert(
-          'Login Failed',
-          result.error || 'Please check your credentials.',
-        );
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-    } finally {
+    // Simulated network delay
+    setTimeout(() => {
       setIsLoading(false);
-    }
+      navigate('HomeScreen');
+    }, 1500);
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="light-content"
-      />
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       {/* Background Gradient */}
       <LinearGradient
-        colors={['#0F1E3A', '#1B2D50', '#1E3A5F']}
+        colors={colors.gradientBg}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 0.5, y: 1 }}
@@ -274,8 +260,9 @@ const LoginScreen = () => {
       ))}
 
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -330,7 +317,10 @@ const LoginScreen = () => {
                 styles.logoWrap,
                 {
                   opacity: logoOpacity,
-                  transform: [{ scale: logoScale }, { translateY: logoFloat }],
+                  transform: [
+                    { scale: logoScale },
+                    { translateY: logoFloat },
+                  ],
                 },
               ]}
             >
@@ -373,27 +363,32 @@ const LoginScreen = () => {
                   style={[
                     styles.inputContainer,
                     hasSubmitted && errors.email && styles.inputError,
+                    focusedInput === 'email' && styles.inputFocused,
                   ]}
                 >
                   <Icon
                     name="mail-outline"
                     iconFamily="Ionicons"
                     size={20}
-                    color="rgba(255,255,255,0.4)"
+                    color={focusedInput === 'email' ? colors.accent : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
                   />
                   <TextInput
                     style={styles.input}
                     placeholder="you@example.com"
-                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'}
                     value={email}
-                    onChangeText={t => {
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput(null)}
+                    onChangeText={(t) => {
                       setEmail(t);
-                      if (hasSubmitted && errors.email)
-                        setErrors(e => ({ ...e, email: undefined }));
+                      if (hasSubmitted && errors.email) setErrors((e) => ({ ...e, email: undefined }));
                     }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
                   />
                 </View>
                 {hasSubmitted && errors.email && (
@@ -408,34 +403,37 @@ const LoginScreen = () => {
                   style={[
                     styles.inputContainer,
                     hasSubmitted && errors.password && styles.inputError,
+                    focusedInput === 'password' && styles.inputFocused,
                   ]}
                 >
                   <Icon
                     name="lock-closed-outline"
                     iconFamily="Ionicons"
                     size={20}
-                    color="rgba(255,255,255,0.4)"
+                    color={focusedInput === 'password' ? colors.accent : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
                   />
                   <TextInput
+                    ref={passwordRef}
                     style={styles.input}
                     placeholder="Enter your password"
-                    placeholderTextColor="rgba(255,255,255,0.25)"
+                    placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'}
                     value={password}
-                    onChangeText={t => {
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput(null)}
+                    onChangeText={(t) => {
                       setPassword(t);
-                      if (hasSubmitted && errors.password)
-                        setErrors(e => ({ ...e, password: undefined }));
+                      if (hasSubmitted && errors.password) setErrors((e) => ({ ...e, password: undefined }));
                     }}
                     secureTextEntry={!showPassword}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
                   />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                     <Icon
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       iconFamily="Ionicons"
                       size={20}
-                      color="rgba(255,255,255,0.4)"
+                      color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}
                     />
                   </TouchableOpacity>
                 </View>
@@ -445,7 +443,10 @@ const LoginScreen = () => {
               </View>
 
               {/* Forgot Password */}
-              <TouchableOpacity style={styles.forgotBtn}>
+              <TouchableOpacity
+                style={styles.forgotBtn}
+                onPress={() => navigate('ForgotPasswordScreen')}
+              >
                 <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
 
@@ -456,9 +457,7 @@ const LoginScreen = () => {
                 disabled={isLoading}
               >
                 <LinearGradient
-                  colors={
-                    isLoading ? ['#4A5568', '#2D3748'] : ['#FF6B00', '#FF9500']
-                  }
+                  colors={isLoading ? ['#4A5568', '#2D3748'] : ['#FF6B00', '#FF9500']}
                   style={styles.loginBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -489,21 +488,11 @@ const LoginScreen = () => {
               {/* Social Buttons */}
               <View style={styles.socialRow}>
                 <TouchableOpacity style={styles.socialBtn}>
-                  <Icon
-                    name="logo-google"
-                    iconFamily="Ionicons"
-                    size={22}
-                    color="#DB4437"
-                  />
+                  <Icon name="logo-google" iconFamily="Ionicons" size={22} color="#DB4437" />
                 </TouchableOpacity>
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity style={styles.socialBtn}>
-                    <Icon
-                      name="logo-apple"
-                      iconFamily="Ionicons"
-                      size={22}
-                      color="#fff"
-                    />
+                    <Icon name="logo-apple" iconFamily="Ionicons" size={22} color="#fff" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -523,13 +512,13 @@ const LoginScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors, isDark) => StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 50,
   },
@@ -611,16 +600,16 @@ const styles = StyleSheet.create({
     borderRadius: 26,
   },
   appName: {
-    color: '#fff',
+    color: colors.text,
     fontSize: 26,
     fontFamily: 'Okra-Bold',
     letterSpacing: 2,
-    textShadowColor: 'rgba(255,107,0,0.5)',
+    textShadowColor: isDark ? 'rgba(255,107,0,0.5)' : 'rgba(255,107,0,0.2)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 20,
   },
   tagline: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.subtext,
     fontSize: 14,
     fontFamily: 'Okra-Medium',
     marginTop: 6,
@@ -628,20 +617,24 @@ const styles = StyleSheet.create({
 
   // ── Form ──
   formCard: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.cardBg,
     borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
+    borderWidth: isDark ? 1 : 0,
+    borderColor: colors.border,
+    shadowColor: isDark ? '#000' : '#888',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 24,
+    elevation: isDark ? 4 : 8,
   },
   formInner: {
-    padding: 24,
+    padding: 22,
   },
   inputGroup: {
     marginBottom: 18,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.subtext,
     fontSize: 13,
     fontFamily: 'Okra-Medium',
     marginBottom: 8,
@@ -650,20 +643,25 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.border,
     paddingHorizontal: 16,
     height: 54,
     gap: 12,
+  },
+  inputFocused: {
+    borderColor: colors.accent,
+    borderWidth: 1.5,
+    backgroundColor: isDark ? 'rgba(255,107,0,0.05)' : 'rgba(255,107,0,0.03)',
   },
   inputError: {
     borderColor: '#FF6B6B',
   },
   input: {
     flex: 1,
-    color: '#fff',
+    color: colors.text,
     fontSize: 15,
     fontFamily: 'Okra-Medium',
   },
@@ -720,7 +718,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   dividerText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: colors.subtext,
     fontSize: 12,
     fontFamily: 'Okra-Medium',
     marginHorizontal: 12,
@@ -751,7 +749,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   signupText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: colors.subtext,
     fontSize: 14,
     fontFamily: 'Okra-Medium',
   },
