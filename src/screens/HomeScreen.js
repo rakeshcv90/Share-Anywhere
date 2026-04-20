@@ -11,7 +11,8 @@ import {
   Linking,
 } from 'react-native';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { TouchableOpacity, Text } from 'react-native';
+import { TouchableOpacity, Text, BackHandler } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import HomeHeader from '../components/home/HomeHeader';
 import { useTCP } from '../service/TCPProvider';
 import { navigate } from '../utils/NavigationUtil';
@@ -22,6 +23,7 @@ import AbsoluteQRBottom from '../components/home/AbsoluteQRBottom';
 import CurrentNetworkBanner from '../components/home/CurrentNetworkBanner';
 import QRScannerModal from '../components/modals/QRScannerModal';
 import QRGenerateModal from '../components/modals/QRGenerateModal';
+import ExitModal from '../components/modals/ExitModal';
 
 import ThemePickerModal from '../components/home/ThemePickerModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -39,19 +41,28 @@ const HomeScreen = () => {
   const [isScannerVisible, setScannerVisible] = useState(false);
   const [isShareVisible, setShareVisible] = useState(false);
   const [isThemeVisible, setThemeVisible] = useState(false);
+  const [isExitVisible, setExitVisible] = useState(false);
   const { colors } = useTheme();
-  const { checkSharedFiles, pendingSharedFiles, isConnected, connectedDevice } = useTCP();
+  const { checkSharedFiles, pendingSharedFiles, isConnected, connectedDevice } =
+    useTCP();
 
   // 🚀 Handle incoming share URL with a delay for UserDefaults sync
-  const handleShareURL = useCallback((url) => {
-    if (url && typeof url === 'string' && url.startsWith('shareanywhere://')) {
-      console.log('--- iOS Share: Received deep link:', url);
-      // Delay to allow UserDefaults to sync between extension and main app processes
-      setTimeout(() => {
-        checkSharedFiles();
-      }, 500);
-    }
-  }, [checkSharedFiles]);
+  const handleShareURL = useCallback(
+    url => {
+      if (
+        url &&
+        typeof url === 'string' &&
+        url.startsWith('shareanywhere://')
+      ) {
+        console.log('--- iOS Share: Received deep link:', url);
+        // Delay to allow UserDefaults to sync between extension and main app processes
+        setTimeout(() => {
+          checkSharedFiles();
+        }, 500);
+      }
+    },
+    [checkSharedFiles],
+  );
 
   // Request Location permissions on mount for Wi-Fi SSID detection
   useEffect(() => {
@@ -67,7 +78,7 @@ const HomeScreen = () => {
 
     // Handle cold launch via URL scheme (app was killed, opened via share extension)
     if (Platform.OS === 'ios') {
-      Linking.getInitialURL().then((url) => {
+      Linking.getInitialURL().then(url => {
         if (url) {
           console.log('--- iOS Share: Cold launch URL:', url);
           handleShareURL(url);
@@ -81,15 +92,18 @@ const HomeScreen = () => {
     });
 
     // Check whenever app returns to foreground (fallback for non-URL opens)
-    const appStateSubscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active') {
-        console.log('--- App Resumed: Checking for shared files...');
-        // Small delay for UserDefaults sync
-        setTimeout(() => {
-          checkSharedFiles();
-        }, 300);
-      }
-    });
+    const appStateSubscription = AppState.addEventListener(
+      'change',
+      nextAppState => {
+        if (nextAppState === 'active') {
+          console.log('--- App Resumed: Checking for shared files...');
+          // Small delay for UserDefaults sync
+          setTimeout(() => {
+            checkSharedFiles();
+          }, 300);
+        }
+      },
+    );
 
     return () => {
       linkingSubscription.remove();
@@ -100,7 +114,9 @@ const HomeScreen = () => {
   // 🚀 Auto-Navigate if files are found
   useEffect(() => {
     if (pendingSharedFiles.length > 0 && !isConnected) {
-      console.log(`--- TCP: ${pendingSharedFiles.length} files pending! Navigating to Send radar.`);
+      console.log(
+        `--- TCP: ${pendingSharedFiles.length} files pending! Navigating to Send radar.`,
+      );
       navigate('SendScreen');
     }
   }, [pendingSharedFiles.length, isConnected]);
@@ -143,6 +159,7 @@ const HomeScreen = () => {
         'Update Ready',
         'The update has been downloaded. Restart the app to apply it?',
         [
+          { text: 'Later', style: 'cancel' },
           {
             text: 'Restart Now',
             onPress: () => {
@@ -155,6 +172,22 @@ const HomeScreen = () => {
       );
     }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        setExitVisible(true);
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress,
+      );
+
+      return () => subscription.remove();
+    }, []),
+  );
 
   const checkForUpdate = async () => {
     try {
@@ -293,6 +326,11 @@ const HomeScreen = () => {
       <ThemePickerModal
         visible={isThemeVisible}
         onClose={() => setThemeVisible(false)}
+      />
+      <ExitModal
+        visible={isExitVisible}
+        onClose={() => setExitVisible(false)}
+        onConfirm={() => BackHandler.exitApp()}
       />
     </View>
   );

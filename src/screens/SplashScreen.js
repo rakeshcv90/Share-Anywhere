@@ -286,7 +286,7 @@ const SplashScreen = () => {
       ).start();
     });
 
-    // Navigate based on auth state
+   
     const timeout = setTimeout(() => {
       if (authStorage.isLoggedIn()) {
         navigate('HomeScreen');
@@ -320,7 +320,9 @@ const SplashScreen = () => {
 
   return (
     <LinearGradient
-      colors={colors.gradientBg}
+
+      colors={['#0F1E3A', '#1B2D50', '#1E3A5F']}
+
       style={styles.container}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}

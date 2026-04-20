@@ -13,10 +13,24 @@ import TcpSocket from 'react-native-tcp-socket';
 import { Buffer } from 'buffer';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNFS from 'react-native-fs';
-import { receiveChunkAck, initNativeFileAck, receiveFileAck, sendChunkAck } from './TCPUtils';
-import { NativeModules, NativeEventEmitter, Platform, Linking, AppState } from 'react-native';
-const TurboTransfer = NativeModules.TurboTransfer || NativeModules.TurboTransferModule;
-const turboEvents = TurboTransfer ? new NativeEventEmitter(TurboTransfer) : null;
+import {
+  receiveChunkAck,
+  initNativeFileAck,
+  receiveFileAck,
+  sendChunkAck,
+} from './TCPUtils';
+import {
+  NativeModules,
+  NativeEventEmitter,
+  Platform,
+  Linking,
+  AppState,
+} from 'react-native';
+const TurboTransfer =
+  NativeModules.TurboTransfer || NativeModules.TurboTransferModule;
+const turboEvents = TurboTransfer
+  ? new NativeEventEmitter(TurboTransfer)
+  : null;
 import { useChunkStore } from '../db/chunkStore';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 
@@ -113,20 +127,24 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   // 🛡️ NATIVE PROTECTION: Pause/Resume native threads when user toggles pause
   useEffect(() => {
     if (activeFileId && TurboTransfer) {
-       if (isPaused) {
-          console.log(`--- NATIVE: Pausing active native transfer for: ${activeFileId}`);
-          if (TurboTransfer.pauseTransfer) {
-             TurboTransfer.pauseTransfer(activeFileId);
-          } else {
-             TurboTransfer.stopTransfer(activeFileId);
-          }
-       } else {
-          // 🔥 RESUME FIX: Unblock the native thread's spin-wait loop
-          console.log(`--- NATIVE: Resuming active native transfer for: ${activeFileId}`);
-          if (TurboTransfer.resumeTransfer) {
-             TurboTransfer.resumeTransfer(activeFileId);
-          }
-       }
+      if (isPaused) {
+        console.log(
+          `--- NATIVE: Pausing active native transfer for: ${activeFileId}`,
+        );
+        if (TurboTransfer.pauseTransfer) {
+          TurboTransfer.pauseTransfer(activeFileId);
+        } else {
+          TurboTransfer.stopTransfer(activeFileId);
+        }
+      } else {
+        // 🔥 RESUME FIX: Unblock the native thread's spin-wait loop
+        console.log(
+          `--- NATIVE: Resuming active native transfer for: ${activeFileId}`,
+        );
+        if (TurboTransfer.resumeTransfer) {
+          TurboTransfer.resumeTransfer(activeFileId);
+        }
+      }
     }
   }, [isPaused, activeFileId]);
 
@@ -140,26 +158,29 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
       const files = await RNFS.readDir(cacheDir);
       console.log(`--- Cache sweep: Found ${files.length} items in cache`);
-      
+
       let deletedCount = 0;
       for (const file of files) {
         // Delete any file that is not a directory and matches our temp patterns
         // or just delete any file in the cache that isn't a known system file
         if (file.isFile()) {
-           const path = Platform.OS === 'android' ? file.path.replace('file://', '') : file.path;
-           await RNFS.unlink(path).catch(() => {});
-           deletedCount++;
+          const path =
+            Platform.OS === 'android'
+              ? file.path.replace('file://', '')
+              : file.path;
+          await RNFS.unlink(path).catch(() => {});
+          deletedCount++;
         }
       }
       if (deletedCount > 0) {
         console.log(`--- Cache sweep: Deleted ${deletedCount} files ✅`);
       }
-      
+
       // Also cleanup shared_files directory
       const sharedDir = `${RNFS.CachesDirectoryPath}/shared_files`;
       if (await RNFS.exists(sharedDir)) {
-          await RNFS.unlink(sharedDir).catch(() => {});
-          console.log('--- Cache sweep: Deleted shared_files directory ✅');
+        await RNFS.unlink(sharedDir).catch(() => {});
+        console.log('--- Cache sweep: Deleted shared_files directory ✅');
       }
     } catch (err) {
       console.log('--- Cache sweep error:', err);
@@ -171,10 +192,12 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       const dummyPath = `${RNFS.DocumentDirectoryPath}/.readme.txt`;
       RNFS.writeFile(
         dummyPath,
-        'Share Anywhere received files will appear here.',
+        'TransferQueen received files will appear here.',
         'utf8',
       )
-        .then(() => console.log('--- iOS: Files app initialization successful.'))
+        .then(() =>
+          console.log('--- iOS: Files app initialization successful.'),
+        )
         .catch(err =>
           console.log('--- iOS: Files app initialization failed:', err),
         );
@@ -182,19 +205,33 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     cleanupCache();
   }, [cleanupCache]);
 
-
   const checkSharedFiles = useCallback(async (retryCount = 0) => {
-    console.log(`--- SHARE CHECK: Attempt ${retryCount + 1}, TurboTransfer available: ${!!TurboTransfer}`);
+    console.log(
+      `--- SHARE CHECK: Attempt ${
+        retryCount + 1
+      }, TurboTransfer available: ${!!TurboTransfer}`,
+    );
     if (TurboTransfer) {
       try {
         const files = await TurboTransfer.getInitialSharedFiles();
-        console.log(`--- SHARE CHECK: Got ${files?.length || 0} files from native`);
+        console.log(
+          `--- SHARE CHECK: Got ${files?.length || 0} files from native`,
+        );
         if (files && files.length > 0) {
-          console.log('--- SHARE CHECK: Files found!', JSON.stringify(files.map((f: any) => ({ name: f.name, size: f.size }))));
+          console.log(
+            '--- SHARE CHECK: Files found!',
+            JSON.stringify(
+              files.map((f: any) => ({ name: f.name, size: f.size })),
+            ),
+          );
           setPendingSharedFiles(files);
         } else if (Platform.OS === 'ios' && retryCount < 5) {
           // UserDefaults sync between extension and main app can be delayed
-          console.log(`--- SHARE CHECK: No files yet, retrying in 400ms... (attempt ${retryCount + 2})`);
+          console.log(
+            `--- SHARE CHECK: No files yet, retrying in 400ms... (attempt ${
+              retryCount + 2
+            })`,
+          );
           setTimeout(() => {
             checkSharedFiles(retryCount + 1);
           }, 400);
@@ -217,7 +254,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   const safeSocketCall = useCallback(
     (socket: any, method: string, ...args: any[]) => {
       if (!getSocketStatus(socket)) {
-        console.log(`--- TCP: Skipping ${method} - Socket not valid or destroyed.`);
+        console.log(
+          `--- TCP: Skipping ${method} - Socket not valid or destroyed.`,
+        );
         return false;
       }
       try {
@@ -293,7 +332,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
               await RNFS.moveFile(finalPath, publicPath);
               finalUri = publicPath;
 
-              console.log('--- Android: Saved and Moved to public Gallery:', publicPath);
+              console.log(
+                '--- Android: Saved and Moved to public Gallery:',
+                publicPath,
+              );
               ReactNativeBlobUtil.fs
                 .scanFile([{ path: publicPath }])
                 .catch(err => console.log('Gallery Scan Error:', err));
@@ -314,7 +356,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
               await RNFS.moveFile(finalPath, downloadPath);
               finalUri = downloadPath;
 
-              console.log('--- Android: Saved and Moved to Downloads folder:', downloadPath);
+              console.log(
+                '--- Android: Saved and Moved to Downloads folder:',
+                downloadPath,
+              );
               ReactNativeBlobUtil.fs
                 .scanFile([{ path: downloadPath }])
                 .catch(err => console.log('Download Scan Error:', err));
@@ -340,8 +385,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           if (isImage || isVideo) {
             try {
               const mediaType = isImage ? 'photo' : 'video';
-              console.log(`--- iOS: Requesting Photos permission for: ${chunkStore.name}`);
-              
+              console.log(
+                `--- iOS: Requesting Photos permission for: ${chunkStore.name}`,
+              );
+
               // 1. Ensure path exists
               const fileExists = await RNFS.exists(finalPath);
               if (!fileExists) {
@@ -393,74 +440,87 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     if (!turboEvents) return;
 
-    const subProgress = turboEvents.addListener('onTurboProgress', (data: any) => {
-      // 🚀 Clear fallback timer because we have activity!
-      if (turboFallbackTimer.current) {
-         clearTimeout(turboFallbackTimer.current);
-         turboFallbackTimer.current = null;
-      }
+    const subProgress = turboEvents.addListener(
+      'onTurboProgress',
+      (data: any) => {
+        // 🚀 Clear fallback timer because we have activity!
+        if (turboFallbackTimer.current) {
+          clearTimeout(turboFallbackTimer.current);
+          turboFallbackTimer.current = null;
+        }
 
-      const transferred = data.transferred || 0;
-      const delta = transferred - nativeTransferredRef.current;
-      nativeTransferredRef.current = transferred;
+        const transferred = data.transferred || 0;
+        const delta = transferred - nativeTransferredRef.current;
+        nativeTransferredRef.current = transferred;
 
-      // Use explicit type passed from Native Module
-      if (data.type === 'send') {
-         setTotalSentBytes((prev: number) => prev + delta);
-      } else if (data.type === 'receive') {
-         setTotalReceivedBytes((prev: number) => prev + delta);
-      } else {
-         // Fallback if data.type is missing but we shouldn't hit this
-         if (activeSocket.current === client) {
+        // Use explicit type passed from Native Module
+        if (data.type === 'send') {
+          setTotalSentBytes((prev: number) => prev + delta);
+        } else if (data.type === 'receive') {
+          setTotalReceivedBytes((prev: number) => prev + delta);
+        } else {
+          // Fallback if data.type is missing but we shouldn't hit this
+          if (activeSocket.current === client) {
             setTotalSentBytes((prev: number) => prev + delta);
-         } else {
+          } else {
             setTotalReceivedBytes((prev: number) => prev + delta);
-         }
-      }
-      
-      // 🚀 UI THROTTLE: Only update progress bar state every 400ms to prevent bridge flooding
-      // Native side now also throttles to 400ms, so we won't miss meaningful updates
-      const now = Date.now();
-      if (now - lastTurboUIUpdate.current > 400) {
-         setActiveFileTransferredBytes(transferred);
-         lastTurboUIUpdate.current = now;
-      }
-    });
+          }
+        }
 
-    const subComplete = turboEvents.addListener('onTurboComplete', (data: any) => {
-      console.log(`--- NATIVE TURBO COMPLETE: ${data.id} [${data.type}]`);
-      if (data.type === 'send') {
+        // 🚀 UI THROTTLE: Only update progress bar state every 400ms to prevent bridge flooding
+        // Native side now also throttles to 400ms, so we won't miss meaningful updates
+        const now = Date.now();
+        if (now - lastTurboUIUpdate.current > 400) {
+          setActiveFileTransferredBytes(transferred);
+          lastTurboUIUpdate.current = now;
+        }
+      },
+    );
+
+    const subComplete = turboEvents.addListener(
+      'onTurboComplete',
+      (data: any) => {
+        console.log(`--- NATIVE TURBO COMPLETE: ${data.id} [${data.type}]`);
+        if (data.type === 'send') {
           // Sender: cleanup handled by file_completed signal
           // Ensure sender shows 100% if throttle missed it
           setActiveFileTransferredBytes(activeFileTotalSize);
-      } else if (data.type === 'receive') {
+        } else if (data.type === 'receive') {
           // Receiver: finalize file
           handleNativeComplete();
-      } else {
+        } else {
           // Fallback if type is missing (e.g. old build)
           if (activeSocket.current === client) {
-              setActiveFileTransferredBytes(activeFileTotalSize);
+            setActiveFileTransferredBytes(activeFileTotalSize);
           } else {
-              handleNativeComplete();
+            handleNativeComplete();
           }
-      }
-      nativeTransferActive.current = null;
-    });
+        }
+        nativeTransferActive.current = null;
+      },
+    );
 
     const subError = turboEvents.addListener('onTurboError', (data: any) => {
       console.log(`--- NATIVE TURBO ERROR: ${data.id}, ${data.error}`);
       nativeTransferActive.current = null;
-      
+
       // 🚀 Fallback: Resume JS loop
       if (turboFallbackTimer.current) {
-         clearTimeout(turboFallbackTimer.current);
-         turboFallbackTimer.current = null;
+        clearTimeout(turboFallbackTimer.current);
+        turboFallbackTimer.current = null;
       }
-      
+
       const socket = activeSocket.current;
       if (socket) {
-         console.log('--- NATIVE ERROR: Falling back to JS loop.');
-         sendChunkAck(0, WINDOW_SIZE, socket, setTotalSentBytes, setSentFiles, setActiveFileTransferredBytes);
+        console.log('--- NATIVE ERROR: Falling back to JS loop.');
+        sendChunkAck(
+          0,
+          WINDOW_SIZE,
+          socket,
+          setTotalSentBytes,
+          setSentFiles,
+          setActiveFileTransferredBytes,
+        );
       }
     });
 
@@ -471,14 +531,17 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     };
   }, [client, generateFile]);
 
-
-
-
-
   const handlePacket = useCallback(
     async (parsedData: any, socket: any) => {
-      if (parsedData?.event !== 'receive_chunk_ack' || parsedData?.chunkNo % 20 === 0) {
-        console.log('--- TCP Packet Received:', parsedData?.event, parsedData?.id || parsedData?.chunkNo || '');
+      if (
+        parsedData?.event !== 'receive_chunk_ack' ||
+        parsedData?.chunkNo % 20 === 0
+      ) {
+        console.log(
+          '--- TCP Packet Received:',
+          parsedData?.event,
+          parsedData?.id || parsedData?.chunkNo || '',
+        );
       }
 
       if (parsedData?.event === 'connect') {
@@ -506,64 +569,76 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         // flow and caused double receiveFile() calls. All native turbo logic is now handled
         // exclusively via the file_ack handler below.
         case 'file_ack': {
-          console.log(`--- TCP: Handshake Success! Starting transfer for: ${parsedData.file?.name}`);
+          console.log(
+            `--- TCP: Handshake Success! Starting transfer for: ${parsedData.file?.name}`,
+          );
           setActiveFileId(parsedData.file?.id);
           setActiveFileTotalSize(parsedData.file?.size || 0);
 
           // 🏁 TURBO NEGOTIATION (Receiver Side)
           // Native turbo is supported on both Android and iOS now.
           const senderIsNativeCapable = true;
-          const isNativeTurbo = !!TurboTransfer && parsedData.file.size >= 0 && senderIsNativeCapable;
+          const isNativeTurbo =
+            !!TurboTransfer &&
+            parsedData.file.size >= 0 &&
+            senderIsNativeCapable;
 
           if (isNativeTurbo) {
-             console.log('--- TCP: Skipping JS fallback streams. Native Turbo is selected.');
-             initNativeFileAck(
-                parsedData.file,
-                setReceivedFiles,
-                setActiveFileTotalSize,
-                setActiveFileTransferredBytes,
-             );
+            console.log(
+              '--- TCP: Skipping JS fallback streams. Native Turbo is selected.',
+            );
+            initNativeFileAck(
+              parsedData.file,
+              setReceivedFiles,
+              setActiveFileTotalSize,
+              setActiveFileTransferredBytes,
+            );
 
-             let turboPort = baseTurboPort.current;
-             baseTurboPort.current = turboPort >= 8200 ? 8085 : turboPort + 1;
-             let myIp = await DeviceInfo.getIpAddress();
-             
-             // 💡 IP Stability Fix: If getting private/useless IP, try using socket remote address
-             if (myIp === '127.0.0.1' || myIp === '::1' || !myIp) {
-                const addr = socket.address();
-                if (addr?.address && addr.address !== '127.0.0.1') {
-                   myIp = addr.address;
-                }
-             }
+            let turboPort = baseTurboPort.current;
+            baseTurboPort.current = turboPort >= 8200 ? 8085 : turboPort + 1;
+            let myIp = await DeviceInfo.getIpAddress();
 
-             console.log(`--- NATIVE: Signalling turbo readiness for ${parsedData.file.id} on ${myIp}:${turboPort}`);
-             
-             const basePath = Platform.OS === 'ios' ? RNFS.DocumentDirectoryPath : RNFS.ExternalDirectoryPath;
-             const filePath = `${basePath}/${parsedData.file.name}`;
+            // 💡 IP Stability Fix: If getting private/useless IP, try using socket remote address
+            if (myIp === '127.0.0.1' || myIp === '::1' || !myIp) {
+              const addr = socket.address();
+              if (addr?.address && addr.address !== '127.0.0.1') {
+                myIp = addr.address;
+              }
+            }
 
-             // 🔥 IMPORTANT RESET FOR NATIVE MODE:
-             nativeTransferActive.current = parsedData.file.id;
-             nativeTransferredRef.current = 0;
-             lastTurboUIUpdate.current = 0;
-             setActiveFileTransferredBytes(0);
-             
-             TurboTransfer.receiveFile(parsedData.file.id, filePath, turboPort);
-             sendMessage({ 
-                event: 'turbo_ready', 
-                id: parsedData.file.id, 
-                port: turboPort,
-                ip: myIp
-             });
+            console.log(
+              `--- NATIVE: Signalling turbo readiness for ${parsedData.file.id} on ${myIp}:${turboPort}`,
+            );
+
+            const basePath =
+              Platform.OS === 'ios'
+                ? RNFS.DocumentDirectoryPath
+                : RNFS.ExternalDirectoryPath;
+            const filePath = `${basePath}/${parsedData.file.name}`;
+
+            // 🔥 IMPORTANT RESET FOR NATIVE MODE:
+            nativeTransferActive.current = parsedData.file.id;
+            nativeTransferredRef.current = 0;
+            lastTurboUIUpdate.current = 0;
+            setActiveFileTransferredBytes(0);
+
+            TurboTransfer.receiveFile(parsedData.file.id, filePath, turboPort);
+            sendMessage({
+              event: 'turbo_ready',
+              id: parsedData.file.id,
+              port: turboPort,
+              ip: myIp,
+            });
           } else {
-             // 🌍 STANDARD MODE (JS Fallback)
-             setActiveFileTransferredBytes(0);
-             receiveFileAck(
-                parsedData.file,
-                socket,
-                setReceivedFiles,
-                setActiveFileTotalSize,
-                setActiveFileTransferredBytes,
-             );
+            // 🌍 STANDARD MODE (JS Fallback)
+            setActiveFileTransferredBytes(0);
+            receiveFileAck(
+              parsedData.file,
+              socket,
+              setReceivedFiles,
+              setActiveFileTotalSize,
+              setActiveFileTransferredBytes,
+            );
           }
           break;
         }
@@ -572,9 +647,13 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
             '--- Event: send_chunk_ack, chunkNo:',
             parsedData.chunkNo,
           );
-          if (nativeTransferActive.current === (parsedData.id || activeFileId)) {
-             console.log('--- TCP: Skipping JS send_chunk_ack - Native Turbo is handling this file.');
-             return;
+          if (
+            nativeTransferActive.current === (parsedData.id || activeFileId)
+          ) {
+            console.log(
+              '--- TCP: Skipping JS send_chunk_ack - Native Turbo is handling this file.',
+            );
+            return;
           }
           sendChunkAck(
             parsedData.chunkNo,
@@ -594,8 +673,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
             );
           }
           if (nativeTransferActive.current === activeFileId) {
-             console.log('--- TCP: Skipping JS receive_chunk_ack - Native Turbo is handling this file.');
-             return;
+            console.log(
+              '--- TCP: Skipping JS receive_chunk_ack - Native Turbo is handling this file.',
+            );
+            return;
           }
           receiveChunkAck(
             parsedData.chunk,
@@ -628,9 +709,15 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
                 console.log('--- Success: Temp file deleted ✅');
                 delete tempPathsRef.current[parsedData.id];
               })
-              .catch(err => console.log('--- Error: Unlink failed ❌:', err?.message));
+              .catch(err =>
+                console.log('--- Error: Unlink failed ❌:', err?.message),
+              );
           } else {
-            console.log('--- No direct ref for ID:', parsedData.id, '. Checking sentFiles...');
+            console.log(
+              '--- No direct ref for ID:',
+              parsedData.id,
+              '. Checking sentFiles...',
+            );
             const completedFile = sentFilesRef.current?.find(
               f => f.id === parsedData.id,
             );
@@ -651,74 +738,102 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
               file.id === parsedData.id ? { ...file, available: true } : file,
             ),
           );
-          
+
           // 🛡️ BATCH STABILITY COOL-DOWN
           // Delay resetting chunk state so the SENDER waits 500ms before starting next item
-          console.log('--- TCP: Cooldown before processing next item in batch...');
+          console.log(
+            '--- TCP: Cooldown before processing next item in batch...',
+          );
           setTimeout(() => {
-             resetCurrentChunkSet();
-             setActiveFileId(null);
-             setActiveFileTotalSize(0);
-             setActiveFileTransferredBytes(0);
+            resetCurrentChunkSet();
+            setActiveFileId(null);
+            setActiveFileTotalSize(0);
+            setActiveFileTransferredBytes(0);
           }, 500);
           break;
         }
         case 'turbo_ready': {
-          console.log(`--- TURBO READY SIGNAL RECEIVED. Original provided IP: ${parsedData.ip}:${parsedData.port}`);
+          console.log(
+            `--- TURBO READY SIGNAL RECEIVED. Original provided IP: ${parsedData.ip}:${parsedData.port}`,
+          );
           // 🔥 Use Zustand store (always up-to-date) instead of React state (can be stale in closures)
           const turboChunkSet = useChunkStore.getState().currentChunkSet;
           const turboActiveId = turboChunkSet?.id;
           // Both Android and iOS now use Native Turbo for SENDING.
           if (TurboTransfer && turboActiveId === parsedData.id) {
-             if (turboChunkSet && turboChunkSet.filePath) {
-                nativeTransferActive.current = parsedData.id;
-                
-                // 🚀 NATIVE IP FIX: ALWAYS use socket.remoteAddress if available over parsed IP to prevent Hotspot Creator fallback logic issues
-                let realTargetIp = parsedData.ip;
-                const socketRemote = socket?.remoteAddress;
-                // If it's a valid remote address and the parsed IP is broken or local loopback
-                if (socketRemote && socketRemote !== '127.0.0.1' && socketRemote !== '::1') {
-                   realTargetIp = socketRemote;
+            if (turboChunkSet && turboChunkSet.filePath) {
+              nativeTransferActive.current = parsedData.id;
+
+              // 🚀 NATIVE IP FIX: ALWAYS use socket.remoteAddress if available over parsed IP to prevent Hotspot Creator fallback logic issues
+              let realTargetIp = parsedData.ip;
+              const socketRemote = socket?.remoteAddress;
+              // If it's a valid remote address and the parsed IP is broken or local loopback
+              if (
+                socketRemote &&
+                socketRemote !== '127.0.0.1' &&
+                socketRemote !== '::1'
+              ) {
+                realTargetIp = socketRemote;
+              }
+
+              // 🚀 RESET PROGRESS REFS for new file
+              nativeTransferredRef.current = 0;
+              lastTurboUIUpdate.current = 0;
+              setActiveFileTransferredBytes(0);
+
+              // 🚀 Fallback Safety: If no progress in 6s, assume Turbo failed
+              if (turboFallbackTimer.current)
+                clearTimeout(turboFallbackTimer.current);
+              turboFallbackTimer.current = setTimeout(() => {
+                if (nativeTransferActive.current === parsedData.id) {
+                  console.log('--- NATIVE TIMEOUT: Reverting to JS mode.');
+                  nativeTransferActive.current = null;
+                  sendChunkAck(
+                    0,
+                    WINDOW_SIZE,
+                    socket,
+                    setTotalSentBytes,
+                    setSentFiles,
+                    setActiveFileTransferredBytes,
+                  );
                 }
+              }, 6000);
 
-                // 🚀 RESET PROGRESS REFS for new file
-                nativeTransferredRef.current = 0;
-                lastTurboUIUpdate.current = 0;
-                setActiveFileTransferredBytes(0);
-                
-                // 🚀 Fallback Safety: If no progress in 6s, assume Turbo failed
-                if (turboFallbackTimer.current) clearTimeout(turboFallbackTimer.current);
-                turboFallbackTimer.current = setTimeout(() => {
-                   if (nativeTransferActive.current === parsedData.id) {
-                      console.log('--- NATIVE TIMEOUT: Reverting to JS mode.');
-                      nativeTransferActive.current = null;
-                      sendChunkAck(0, WINDOW_SIZE, socket, setTotalSentBytes, setSentFiles, setActiveFileTransferredBytes);
-                   }
-                }, 6000);
-
-                console.log(`--- NATIVE: Starting turbo-speed send reliably routed to: ${realTargetIp}:${parsedData.port}`);
-                TurboTransfer.sendFile(
-                   parsedData.id,
-                   turboChunkSet.filePath,
-                   realTargetIp,
-                   parsedData.port
-                );
-             }
+              console.log(
+                `--- NATIVE: Starting turbo-speed send reliably routed to: ${realTargetIp}:${parsedData.port}`,
+              );
+              TurboTransfer.sendFile(
+                parsedData.id,
+                turboChunkSet.filePath,
+                realTargetIp,
+                parsedData.port,
+              );
+            }
           } else if (turboActiveId === parsedData.id) {
-             // 🍎 iOS SENDER FALLBACK: Use JS chunk-based sending
-             console.log('--- iOS: Using JS chunk fallback for sending.');
-             sendChunkAck(0, WINDOW_SIZE, socket, setTotalSentBytes, setSentFiles, setActiveFileTransferredBytes);
+            // 🍎 iOS SENDER FALLBACK: Use JS chunk-based sending
+            console.log('--- iOS: Using JS chunk fallback for sending.');
+            sendChunkAck(
+              0,
+              WINDOW_SIZE,
+              socket,
+              setTotalSentBytes,
+              setSentFiles,
+              setActiveFileTransferredBytes,
+            );
           }
           break;
         }
         case 'pause_transfer': {
           console.log('--- TCP: Pause signal received from remote.');
           useChunkStore.getState().setPaused(true);
-          
+
           // 🛡️ NATIVE PROTECTION: Immediately stop any native transfer threads
           if (TurboTransfer && activeFileId) {
-             console.log(`--- NATIVE: Remote paused. Pausing local native thread for: ${activeFileId}`);
-             if (TurboTransfer.pauseTransfer) TurboTransfer.pauseTransfer(activeFileId);
+            console.log(
+              `--- NATIVE: Remote paused. Pausing local native thread for: ${activeFileId}`,
+            );
+            if (TurboTransfer.pauseTransfer)
+              TurboTransfer.pauseTransfer(activeFileId);
           }
           break;
         }
@@ -728,22 +843,29 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
           // If we are native, unpause the thread
           if (TurboTransfer && activeFileId && TurboTransfer.resumeTransfer) {
-             console.log(`--- NATIVE: Resuming native thread for: ${activeFileId}`);
-             TurboTransfer.resumeTransfer(activeFileId);
+            console.log(
+              `--- NATIVE: Resuming native thread for: ${activeFileId}`,
+            );
+            TurboTransfer.resumeTransfer(activeFileId);
           } else {
-             // Fallback for JS
-             const state = useChunkStore.getState();
-             if (state.currentChunkSet && state.currentChunkSet.lastChunkNo !== undefined) {
-                console.log(`--- TCP: Resuming sender from chunk: ${state.currentChunkSet.lastChunkNo}`);
-                sendChunkAck(
-                   state.currentChunkSet.lastChunkNo,
-                   WINDOW_SIZE,
-                   socket,
-                   setTotalSentBytes,
-                   setSentFiles,
-                   setActiveFileTransferredBytes
-                );
-             }
+            // Fallback for JS
+            const state = useChunkStore.getState();
+            if (
+              state.currentChunkSet &&
+              state.currentChunkSet.lastChunkNo !== undefined
+            ) {
+              console.log(
+                `--- TCP: Resuming sender from chunk: ${state.currentChunkSet.lastChunkNo}`,
+              );
+              sendChunkAck(
+                state.currentChunkSet.lastChunkNo,
+                WINDOW_SIZE,
+                socket,
+                setTotalSentBytes,
+                setSentFiles,
+                setActiveFileTransferredBytes,
+              );
+            }
           }
           break;
         }
@@ -787,19 +909,22 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
         let offset = 0;
         let newlineIndex;
-        
+
         while ((newlineIndex = buffer.indexOf(10, offset)) !== -1) {
           // Found a full packet frame!
           const line = buffer.toString('utf8', offset, newlineIndex).trim();
           offset = newlineIndex + 1;
-          
+
           if (line) {
             try {
               const parsed = JSON.parse(line);
               // Always use the LATEST logic provided by the Ref
               handlePacketRef.current?.(parsed, socket);
             } catch (e) {
-              console.log('--- TCP JSON Parse Error (likely partial packet):', e);
+              console.log(
+                '--- TCP JSON Parse Error (likely partial packet):',
+                e,
+              );
             }
           }
         }
@@ -984,7 +1109,8 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
 
   const togglePause = useCallback(() => {
-    const { isPaused: currentPaused, togglePause: toggle } = useChunkStore.getState();
+    const { isPaused: currentPaused, togglePause: toggle } =
+      useChunkStore.getState();
     toggle();
     const nextPaused = !currentPaused;
 
@@ -997,29 +1123,44 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     if (!nextPaused) {
       // 🔥 NATIVE TURBO RESUME: Directly unblock the native thread
       if (TurboTransfer && activeFileId) {
-         console.log(`--- TCP: Resuming native Turbo transfer for: ${activeFileId}`);
-         if (TurboTransfer.resumeTransfer) {
-            TurboTransfer.resumeTransfer(activeFileId);
-         }
+        console.log(
+          `--- TCP: Resuming native Turbo transfer for: ${activeFileId}`,
+        );
+        if (TurboTransfer.resumeTransfer) {
+          TurboTransfer.resumeTransfer(activeFileId);
+        }
       }
 
       // JS FALLBACK RESUME: Trigger the next chunk window
       const state = useChunkStore.getState();
       const socket = getSocket();
-      if (state.currentChunkSet && state.currentChunkSet.lastChunkNo !== undefined && socket) {
-         console.log(`--- TCP: Resuming JS sender loop from: ${state.currentChunkSet.lastChunkNo}`);
-         sendChunkAck(
-            state.currentChunkSet.lastChunkNo,
-            WINDOW_SIZE,
-            socket,
-            setTotalSentBytes,
-            setSentFiles,
-            setActiveFileTransferredBytes
-         );
+      if (
+        state.currentChunkSet &&
+        state.currentChunkSet.lastChunkNo !== undefined &&
+        socket
+      ) {
+        console.log(
+          `--- TCP: Resuming JS sender loop from: ${state.currentChunkSet.lastChunkNo}`,
+        );
+        sendChunkAck(
+          state.currentChunkSet.lastChunkNo,
+          WINDOW_SIZE,
+          socket,
+          setTotalSentBytes,
+          setSentFiles,
+          setActiveFileTransferredBytes,
+        );
       }
     }
-  }, [sendMessage, getSocket, setTotalSentBytes, setSentFiles, setActiveFileTransferredBytes, activeFileId]);
-  
+  }, [
+    sendMessage,
+    getSocket,
+    setTotalSentBytes,
+    setSentFiles,
+    setActiveFileTransferredBytes,
+    activeFileId,
+  ]);
+
   // isPaused is already extracted via useChunkStore above
 
   const getFileExtension = useCallback((file: any) => {
@@ -1056,7 +1197,12 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   }, [currentChunkSet]);
 
   const processNextInQueue = useCallback(() => {
-    console.log('--- processNextInQueue called. Queue size:', sendQueue.current.length, 'isProcessing:', isProcessing.current);
+    console.log(
+      '--- processNextInQueue called. Queue size:',
+      sendQueue.current.length,
+      'isProcessing:',
+      isProcessing.current,
+    );
     if (sendQueue.current.length === 0 || isProcessing.current) return;
 
     const nextItem = sendQueue.current.shift();
@@ -1068,62 +1214,63 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const sendFileAck = useCallback(
-    (
-    file: any,
-    type: 'image' | 'file' | 'video' | 'audio',
-  ) => {
-    const activeUri = file?.fileCopyUri || file?.uri;
-    if (!activeUri) return;
+    (file: any, type: 'image' | 'file' | 'video' | 'audio') => {
+      const activeUri = file?.fileCopyUri || file?.uri;
+      if (!activeUri) return;
 
-    const rawData = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      name:
-        type === 'file'
-          ? file?.name
-          : file?.fileName || file?.name || 'Unknown',
-      size:
-        type === 'file'
-          ? Number(file?.size)
-          : Number(file?.fileSize || file?.size || 0),
-      mimeType: getFileExtension(file),
-      type,
-      uri: file?.copyToPath || file?.fileCopyUri || activeUri,
-      copyToPath: file?.copyToPath,
-      fileCopyUri: file?.fileCopyUri,
-      available: false,
-    };
+      const rawData = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+        name:
+          type === 'file'
+            ? file?.name
+            : file?.fileName || file?.name || 'Unknown',
+        size:
+          type === 'file'
+            ? Number(file?.size)
+            : Number(file?.fileSize || file?.size || 0),
+        mimeType: getFileExtension(file),
+        type,
+        uri: file?.copyToPath || file?.fileCopyUri || activeUri,
+        copyToPath: file?.copyToPath,
+        fileCopyUri: file?.fileCopyUri,
+        available: false,
+      };
 
-    console.log('--- sendFileAck added to queue:', rawData.name);
-    // Safety check for NaN
-    if (isNaN(rawData.size)) {
-      rawData.size = 0;
-    }
-    setSentFiles((prev: any[]) => [rawData, ...prev]);
-    sendQueue.current.push({ ...rawData, file });
-    sendMessage({ event: 'file_queued', file: rawData });
+      console.log('--- sendFileAck added to queue:', rawData.name);
+      // Safety check for NaN
+      if (isNaN(rawData.size)) {
+        rawData.size = 0;
+      }
+      setSentFiles((prev: any[]) => [rawData, ...prev]);
+      sendQueue.current.push({ ...rawData, file });
+      sendMessage({ event: 'file_queued', file: rawData });
 
-    // Sync batch stats with receiver
-    const newTotalFiles = (sentFiles?.length || 0) + 1;
-    const newTotalSize =
-      (sentFiles?.reduce((acc, f) => acc + (f.size || 0), 0) || 0) +
-      rawData.size;
-    setBatchTotalFiles(newTotalFiles);
-    setBatchTotalSize(newTotalSize);
-    sendMessage({
-      event: 'batch_stats',
-      totalFiles: newTotalFiles,
-      totalSize: newTotalSize,
-    });
+      // Sync batch stats with receiver
+      const newTotalFiles = (sentFiles?.length || 0) + 1;
+      const newTotalSize =
+        (sentFiles?.reduce((acc, f) => acc + (f.size || 0), 0) || 0) +
+        rawData.size;
+      setBatchTotalFiles(newTotalFiles);
+      setBatchTotalSize(newTotalSize);
+      sendMessage({
+        event: 'batch_stats',
+        totalFiles: newTotalFiles,
+        totalSize: newTotalSize,
+      });
 
-    if (!isProcessing.current) {
-      processNextInQueue();
-    }
-  }, [getSocket, sendMessage, processNextInQueue, sentFiles]);
+      if (!isProcessing.current) {
+        processNextInQueue();
+      }
+    },
+    [getSocket, sendMessage, processNextInQueue, sentFiles],
+  );
 
   const sendBatchAck = useCallback(
     (files: any[], type: 'image' | 'file' | 'video' | 'audio') => {
       if (!files || !Array.isArray(files) || files.length === 0) {
-        console.log('--- TCP: sendBatchAck called with empty or invalid files array');
+        console.log(
+          '--- TCP: sendBatchAck called with empty or invalid files array',
+        );
         return;
       }
 
@@ -1146,7 +1293,8 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
             size: isNaN(size) ? 0 : size,
             mimeType: getFileExtension(file),
             type,
-            uri: file?.copyToPath || file?.fileCopyUri || file?.uri || file?.path,
+            uri:
+              file?.copyToPath || file?.fileCopyUri || file?.uri || file?.path,
             copyToPath: file?.copyToPath,
             fileCopyUri: file?.fileCopyUri,
             available: false,
@@ -1260,14 +1408,19 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     };
 
     // Check if app was opened with a URL (cold start)
-    Linking.getInitialURL().then((url) => {
-      if (url?.includes('share')) {
-        console.log('--- SHARE LIFECYCLE: App cold-started with share URL:', url);
-        setTimeout(() => {
-          checkSharedFiles();
-        }, 800);
-      }
-    }).catch(() => {});
+    Linking.getInitialURL()
+      .then(url => {
+        if (url?.includes('share')) {
+          console.log(
+            '--- SHARE LIFECYCLE: App cold-started with share URL:',
+            url,
+          );
+          setTimeout(() => {
+            checkSharedFiles();
+          }, 800);
+        }
+      })
+      .catch(() => {});
 
     // Listen for URL opens while app is running (warm start)
     const linkingSub = Linking.addEventListener('url', handleDeepLink);
@@ -1275,7 +1428,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     // 2. Handle AppState changes (app foregrounded after share extension ran)
     const handleAppState = (nextState: string) => {
       if (nextState === 'active') {
-        console.log('--- SHARE LIFECYCLE: App became active, checking for shared files...');
+        console.log(
+          '--- SHARE LIFECYCLE: App became active, checking for shared files...',
+        );
         checkSharedFiles();
       }
     };
@@ -1319,10 +1474,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     // 2. fileCopyUri — set by @react-native-documents/picker when copyTo: 'cachesDirectory' is used
     // 3. uri / path — fallback (works for Android file:// directly, but NOT for iOS ph://)
     let currentFilePath: string | undefined =
-      item.copyToPath ||
-      item.fileCopyUri ||
-      item.uri ||
-      item.path;
+      item.copyToPath || item.fileCopyUri || item.uri || item.path;
 
     console.log('--- processFile: Raw URI fields:', {
       copyToPath: item.copyToPath,
@@ -1334,11 +1486,21 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
     // 🍎 iOS URI STABILITY FIX:
     // Any URI that isn't already a direct local path starts with a copy to our stable cache.
-    if (Platform.OS === 'ios' && (currentFilePath?.startsWith('ph://') || (!currentFilePath?.startsWith('/') && !currentFilePath?.startsWith('file:///')))) {
+    if (
+      Platform.OS === 'ios' &&
+      (currentFilePath?.startsWith('ph://') ||
+        (!currentFilePath?.startsWith('/') &&
+          !currentFilePath?.startsWith('file:///')))
+    ) {
       try {
         const tempPath = `${RNFS.CachesDirectoryPath}/transfer_${id}_${name}`;
-        console.log('--- iOS: Stability Copy started:', currentFilePath, '->', tempPath);
-        
+        console.log(
+          '--- iOS: Stability Copy started:',
+          currentFilePath,
+          '->',
+          tempPath,
+        );
+
         // Use ReactNativeBlobUtil for ph:// resolution if possible, otherwise fallback to RNFS
         if (currentFilePath?.startsWith('ph://')) {
           // Special handling for ph:// - we use the asset resolution logic
@@ -1346,23 +1508,26 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         } else {
           await RNFS.copyFile(currentFilePath!, tempPath);
         }
-        
+
         currentFilePath = tempPath;
         tempPathsRef.current[id] = tempPath;
       } catch (err) {
-        console.log('--- iOS: Stability Copy failed (fallback to direct read):', err);
+        console.log(
+          '--- iOS: Stability Copy failed (fallback to direct read):',
+          err,
+        );
         // 🛡️ FALLBACK: If the original URI was ph:// and copy failed,
         // try using CameraRoll or native readChunkBase64 which can handle ph:// URIs.
         // For now, log and continue — the processFile exists() check below will catch this.
       }
     } else if (Platform.OS === 'ios' && currentFilePath?.includes('AppIcon')) {
-       // Special handling for app icons/assets
-       try {
+      // Special handling for app icons/assets
+      try {
         const tempPath = `${RNFS.CachesDirectoryPath}/transfer_icon_${id}_${name}`;
         await RNFS.copyFile(currentFilePath!, tempPath);
         currentFilePath = tempPath;
         tempPathsRef.current[id] = tempPath;
-       } catch(e) {}
+      } catch (e) {}
     }
 
     // 🔗 iOS SHARED FILE PATH FIX: Check if file is in app group container
@@ -1370,12 +1535,21 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     // accessible but at a different path than Documents/Caches. The RNFS bridge
     // sometimes fails to stat/read files outside the direct sandbox.
     // We explicitly copy it to our CachesDirectory to ensure read permissions.
-    if (Platform.OS === 'ios' && currentFilePath && currentFilePath.includes('AppGroup')) {
+    if (
+      Platform.OS === 'ios' &&
+      currentFilePath &&
+      currentFilePath.includes('AppGroup')
+    ) {
       try {
         const cleanOriginalPath = currentFilePath.replace(/^file:\/\//, '');
         const tempPath = `${RNFS.CachesDirectoryPath}/share_${id}_${name}`;
-        console.log('--- iOS: Migrating Shared AppGroup file to sandbox:', cleanOriginalPath, '->', tempPath);
-        
+        console.log(
+          '--- iOS: Migrating Shared AppGroup file to sandbox:',
+          cleanOriginalPath,
+          '->',
+          tempPath,
+        );
+
         // We use ReactNativeBlobUtil to safely copy cross-container
         if (await ReactNativeBlobUtil.fs.exists(cleanOriginalPath)) {
           await ReactNativeBlobUtil.fs.cp(cleanOriginalPath, tempPath);
@@ -1383,7 +1557,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           tempPathsRef.current[id] = tempPath;
           console.log('--- iOS: Successfully staged Shared file into sandbox.');
         } else {
-          console.log('--- iOS: AppGroup file does not exist at:', cleanOriginalPath);
+          console.log(
+            '--- iOS: AppGroup file does not exist at:',
+            cleanOriginalPath,
+          );
         }
       } catch (e) {
         console.log('--- iOS: Failed to migrate Shared AppGroup file:', e);
@@ -1393,11 +1570,14 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     // 🚀 TURBO FAST-PATH: Android content:// URIs with native Turbo available
     // Skip the expensive JS-side file copy! The native module reads content:// directly
     // via ContentResolver. This eliminates 10-20 seconds of delay for large videos.
-    const isAndroidContentUri = Platform.OS === 'android' && currentFilePath?.startsWith('content://');
+    const isAndroidContentUri =
+      Platform.OS === 'android' && currentFilePath?.startsWith('content://');
     const isNativeTurboAvailable = !!TurboTransfer;
 
     if (isAndroidContentUri && isNativeTurboAvailable) {
-      console.log(`--- 🚀 TURBO FAST-PATH: Skipping JS file copy for content:// URI`);
+      console.log(
+        `--- 🚀 TURBO FAST-PATH: Skipping JS file copy for content:// URI`,
+      );
       // Use picker metadata size directly — native will query ContentResolver for exact size
       let fileSize = Number(size);
       if (!fileSize || isNaN(fileSize)) {
@@ -1427,7 +1607,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       }
       safetyTimeoutRef.current = setTimeout(() => {
         if (isProcessing.current && activeFileId === id) {
-          console.log('--- SAFETY: Handshake/Transfer timeout. Resetting queue for:', name);
+          console.log(
+            '--- SAFETY: Handshake/Transfer timeout. Resetting queue for:',
+            name,
+          );
           isProcessing.current = false;
           setActiveFileId(null);
           setCurrentChunkSet(null);
@@ -1439,7 +1622,11 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         console.log('--- Sending handshake for (turbo fast-path):', name);
         safeWrite(
           socket,
-          JSON.stringify({ event: 'file_ack', file: rawDataForAck, senderPlatform: Platform.OS }) + '\n',
+          JSON.stringify({
+            event: 'file_ack',
+            file: rawDataForAck,
+            senderPlatform: Platform.OS,
+          }) + '\n',
         );
         console.log('FILE ACKNOWLEDGE SENT ✅ (turbo fast-path):', name);
       } catch (error) {
@@ -1489,67 +1676,97 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       console.log('--- ERROR: File does not exist at path:', normalizedPath);
       const decoded = decodeURIComponent(normalizedPath);
       if (decoded !== normalizedPath && (await RNFS.exists(decoded))) {
-          normalizedPath = decoded;
-          console.log('--- FIXED: File found after extra decoding:', normalizedPath);
+        normalizedPath = decoded;
+        console.log(
+          '--- FIXED: File found after extra decoding:',
+          normalizedPath,
+        );
       } else if (Platform.OS === 'ios') {
-          // 🍎 iOS VIDEO COPY FALLBACK: When launchImageLibrary's copyTo fails silently
-          // for large videos (100MB+), the copyToPath is dangling. Recover by re-copying
-          // from the original ph:// URI via ReactNativeBlobUtil which handles Apple Photos
-          // asset resolution natively.
-          const originalUri = item.uri || file?.uri;
-          const isPhotoLibraryUri = originalUri?.startsWith('ph://') || 
-                                    originalUri?.includes('PHAsset') ||
-                                    originalUri?.includes('assets-library://');
-          
-          if (originalUri && isPhotoLibraryUri) {
-            console.log('--- iOS FALLBACK: copyTo failed, attempting ph:// recovery:', originalUri);
-            const fallbackPath = `${RNFS.CachesDirectoryPath}/recovery_${id}_${name}`;
-            try {
-              await ReactNativeBlobUtil.fs.cp(originalUri, fallbackPath);
-              if (await RNFS.exists(fallbackPath)) {
-                normalizedPath = fallbackPath;
-                tempPathsRef.current[id] = fallbackPath;
-                console.log('--- iOS FALLBACK: ✅ Recovery successful:', fallbackPath);
-              } else {
-                throw new Error('Copy completed but file not found at destination');
-              }
-            } catch (copyErr) {
-              console.log('--- iOS FALLBACK: ReactNativeBlobUtil cp failed, trying CameraRoll save...', copyErr);
-              // Last resort: use CameraRoll to get a usable local URI
-              try {
-                const assetData = await CameraRoll.iosGetImageDataById(originalUri, { convertHeicImages: false });
-                const localUri = assetData?.node?.image?.filepath || assetData?.node?.image?.uri;
-                if (localUri) {
-                  const cleanLocalUri = localUri.replace(/^file:\/\//, '');
-                  if (await RNFS.exists(cleanLocalUri)) {
-                    normalizedPath = cleanLocalUri;
-                    console.log('--- iOS FALLBACK: ✅ CameraRoll resolution successful:', cleanLocalUri);
-                  } else {
-                    throw new Error('CameraRoll URI does not point to a readable file');
-                  }
-                } else {
-                  throw new Error('CameraRoll returned no usable local URI');
-                }
-              } catch (cameraRollErr) {
-                console.log('--- iOS FALLBACK: ❌ All recovery paths exhausted:', cameraRollErr);
-                isProcessing.current = false;
-                setActiveFileId(null);
-                processNextInQueue();
-                return;
-              }
+        // 🍎 iOS VIDEO COPY FALLBACK: When launchImageLibrary's copyTo fails silently
+        // for large videos (100MB+), the copyToPath is dangling. Recover by re-copying
+        // from the original ph:// URI via ReactNativeBlobUtil which handles Apple Photos
+        // asset resolution natively.
+        const originalUri = item.uri || file?.uri;
+        const isPhotoLibraryUri =
+          originalUri?.startsWith('ph://') ||
+          originalUri?.includes('PHAsset') ||
+          originalUri?.includes('assets-library://');
+
+        if (originalUri && isPhotoLibraryUri) {
+          console.log(
+            '--- iOS FALLBACK: copyTo failed, attempting ph:// recovery:',
+            originalUri,
+          );
+          const fallbackPath = `${RNFS.CachesDirectoryPath}/recovery_${id}_${name}`;
+          try {
+            await ReactNativeBlobUtil.fs.cp(originalUri, fallbackPath);
+            if (await RNFS.exists(fallbackPath)) {
+              normalizedPath = fallbackPath;
+              tempPathsRef.current[id] = fallbackPath;
+              console.log(
+                '--- iOS FALLBACK: ✅ Recovery successful:',
+                fallbackPath,
+              );
+            } else {
+              throw new Error(
+                'Copy completed but file not found at destination',
+              );
             }
-          } else {
-            console.log('--- ERROR: No ph:// fallback available. Original URI:', originalUri);
-            isProcessing.current = false;
-            setActiveFileId(null);
-            processNextInQueue();
-            return;
+          } catch (copyErr) {
+            console.log(
+              '--- iOS FALLBACK: ReactNativeBlobUtil cp failed, trying CameraRoll save...',
+              copyErr,
+            );
+            // Last resort: use CameraRoll to get a usable local URI
+            try {
+              const assetData = await CameraRoll.iosGetImageDataById(
+                originalUri,
+                { convertHeicImages: false },
+              );
+              const localUri =
+                assetData?.node?.image?.filepath || assetData?.node?.image?.uri;
+              if (localUri) {
+                const cleanLocalUri = localUri.replace(/^file:\/\//, '');
+                if (await RNFS.exists(cleanLocalUri)) {
+                  normalizedPath = cleanLocalUri;
+                  console.log(
+                    '--- iOS FALLBACK: ✅ CameraRoll resolution successful:',
+                    cleanLocalUri,
+                  );
+                } else {
+                  throw new Error(
+                    'CameraRoll URI does not point to a readable file',
+                  );
+                }
+              } else {
+                throw new Error('CameraRoll returned no usable local URI');
+              }
+            } catch (cameraRollErr) {
+              console.log(
+                '--- iOS FALLBACK: ❌ All recovery paths exhausted:',
+                cameraRollErr,
+              );
+              isProcessing.current = false;
+              setActiveFileId(null);
+              processNextInQueue();
+              return;
+            }
           }
-      } else {
+        } else {
+          console.log(
+            '--- ERROR: No ph:// fallback available. Original URI:',
+            originalUri,
+          );
           isProcessing.current = false;
           setActiveFileId(null);
           processNextInQueue();
           return;
+        }
+      } else {
+        isProcessing.current = false;
+        setActiveFileId(null);
+        processNextInQueue();
+        return;
       }
     }
 
@@ -1562,7 +1779,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       const statSize = Number(stat.size);
       if (statSize > 0) {
         if (fileSize > 0 && fileSize !== statSize) {
-          console.log(`--- processFile: Size mismatch! metadata=${fileSize}, actual=${statSize}. Using actual.`);
+          console.log(
+            `--- processFile: Size mismatch! metadata=${fileSize}, actual=${statSize}. Using actual.`,
+          );
         }
         fileSize = statSize;
       }
@@ -1597,7 +1816,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     }
     safetyTimeoutRef.current = setTimeout(() => {
       if (isProcessing.current && activeFileId === id) {
-        console.log('--- SAFETY: Handshake/Transfer timeout. Resetting queue for:', name);
+        console.log(
+          '--- SAFETY: Handshake/Transfer timeout. Resetting queue for:',
+          name,
+        );
         isProcessing.current = false;
         setActiveFileId(null);
         setCurrentChunkSet(null);
@@ -1609,11 +1831,15 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       // 🌉 BATCH COOL-DOWN:
       // Give the iOS/Android disk 250ms to finish flushes from the last file.
       await new Promise<void>(resolve => setTimeout(() => resolve(), 250));
-      
+
       console.log('--- Sending handshake for:', name);
       safeWrite(
         socket,
-        JSON.stringify({ event: 'file_ack', file: rawDataForAck, senderPlatform: Platform.OS }) + '\n',
+        JSON.stringify({
+          event: 'file_ack',
+          file: rawDataForAck,
+          senderPlatform: Platform.OS,
+        }) + '\n',
       );
       console.log('FILE ACKNOWLEDGE SENT ✅:', name);
     } catch (error) {

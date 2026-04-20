@@ -347,50 +347,14 @@ const SendScreen = () => {
 
                   <View style={styles.brandingContainer}>
                     <View style={styles.saContainer}>
-                      <LinearGradient
-                        colors={['#003366', '#0072FF']}
-                        style={[
-                          styles.saBox,
-                          {
-                            width: 40,
-                            height: 40,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                          },
-                        ]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
+                      <View
+                        style={[styles.saContainer, { left: -width * 0.015 }]}
                       >
-                        <CustomeText
-                          fontFamily="Okra-Bold"
-                          fontSize={16}
-                          color="#fff"
-                          variant="h6"
-                          style={{ textAlign: 'center' }}
-                          onLayout={() => {}}
-                          numberOfLines={1}
-                        >
-                          SA
-                        </CustomeText>
-                      </LinearGradient>
-                      <Animated.View
-                        style={[
-                          styles.waveIconWrapper,
-                          {
-                            transform: [
-                              { scale: wifiPulse },
-                              { rotate: '45deg' },
-                            ],
-                          },
-                        ]}
-                      >
-                        <Icon
-                          name="wifi"
-                          iconFamily="Ionicons"
-                          size={12}
-                          color="#00E5FF"
+                        <Image
+                          source={require('../assets/icons/tq.png')}
+                          style={styles.saBox}
                         />
-                      </Animated.View>
+                      </View>
                     </View>
                     <View style={styles.titleColumn}>
                       <CustomeText
@@ -765,11 +729,11 @@ const styles = StyleSheet.create({
   },
   saContainer: {
     position: 'relative',
-    padding: 2,
+    // padding: 2,
   },
   saBox: {
-    // width: 40,
-    // height: 40,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
