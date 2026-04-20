@@ -12,6 +12,8 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { navigate } from '../utils/NavigationUtil';
 import DeviceInfo from 'react-native-device-info';
+import { authStorage } from '../db/storage';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,6 +34,9 @@ const RING_DOTS = [
 const RING_RADII = { 1: 85, 2: 130, 3: 175, 4: 220 };
 
 const SplashScreen = () => {
+  const { colors, isDark } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [appVersion] = useState(DeviceInfo.getVersion());
 
   // Core animations
@@ -281,9 +286,13 @@ const SplashScreen = () => {
       ).start();
     });
 
-    // Navigate
+   
     const timeout = setTimeout(() => {
-      navigate('HomeScreen');
+      if (authStorage.isLoggedIn()) {
+        navigate('HomeScreen');
+      } else {
+        navigate('LoginScreen');
+      }
     }, 3500);
 
     return () => clearTimeout(timeout);
@@ -311,7 +320,9 @@ const SplashScreen = () => {
 
   return (
     <LinearGradient
+
       colors={['#0F1E3A', '#1B2D50', '#1E3A5F']}
+
       style={styles.container}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
@@ -558,7 +569,7 @@ const SplashScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors, isDark) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -680,11 +691,11 @@ const styles = StyleSheet.create({
   },
 
   appName: {
-    color: '#FFFFFF',
+    color: colors.text,
     fontSize: 34,
     fontFamily: 'Okra-Bold',
     letterSpacing: 1.5,
-    textShadowColor: 'rgba(255,107,0,0.35)',
+    textShadowColor: isDark ? 'rgba(255,107,0,0.35)' : 'rgba(255,107,0,0.15)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 25,
   },
@@ -697,7 +708,7 @@ const styles = StyleSheet.create({
   },
 
   taglineText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.subtext,
     fontSize: 13,
     fontFamily: 'Okra-Medium',
     letterSpacing: 1.5,
@@ -722,7 +733,7 @@ const styles = StyleSheet.create({
     width: width * 0.45,
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
     overflow: 'visible',
   },
 
@@ -742,7 +753,7 @@ const styles = StyleSheet.create({
 
   version: {
     marginTop: 14,
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.subtext,
     fontSize: 13,
     fontFamily: 'Okra-Medium',
     letterSpacing: 1.5,
