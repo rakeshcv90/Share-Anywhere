@@ -4,20 +4,18 @@ import {
   StyleSheet,
   Text,
   Animated,
+  Image,
 } from 'react-native';
-import React, { useRef, useEffect, useState } from 'react';
-import { screenWidth } from '../../utils/Constants';
-import Icon from '../global/Icon';
+import React, { useRef, useEffect } from 'react';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Linking, Platform } from 'react-native';
+
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
-import ThemePickerModal from './ThemePickerModal';
 
 const HomeHeader = ({ onPressProfile }) => {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const [isThemeModalVisible, setThemeModalVisible] = useState(false);
 
   // Subtle pulse animation on wifi icon
   const wifiPulse = useRef(new Animated.Value(1)).current;
@@ -52,30 +50,10 @@ const HomeHeader = ({ onPressProfile }) => {
             <View style={[styles.brandingContainer, { zIndex: 10 }]}>
               <View style={styles.logoStack}>
                 <View style={styles.saContainer}>
-                  <LinearGradient
-                    colors={['#003366', '#0072FF']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                  <Image
+                    source={require('../../assets/icons/tq.png')}
                     style={styles.saBox}
-                  >
-                    <Text style={styles.logoText}>TQ</Text>
-                  </LinearGradient>
-                  {/* Animated wave icon */}
-                  <Animated.View
-                    style={[
-                      styles.waveIconWrapper,
-                      {
-                        transform: [{ scale: wifiPulse }, { rotate: '45deg' }],
-                      },
-                    ]}
-                  >
-                    <Icon
-                      name="wifi"
-                      iconFamily="Ionicons"
-                      size={16}
-                      color="#00E5FF"
-                    />
-                  </Animated.View>
+                  />
                 </View>
               </View>
 
@@ -175,6 +153,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
+  },
+  saBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    // justifyContent: 'center',
+    // alignItems: 'center',
   },
 });
 

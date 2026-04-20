@@ -326,45 +326,23 @@ const ReceiveScreen = () => {
                     </TouchableOpacity>
 
                     <View style={receiveStyles.brandingContainer}>
-                      <View style={receiveStyles.saContainer}>
-                        <LinearGradient
-                          colors={['#003366', '#0072FF']}
+                      <View
+                        style={[
+                          receiveStyles.saContainer,
+                          { left: -width * 0.015 },
+                        ]}
+                      >
+                        <Image
+                          source={require('../assets/icons/tq.png')}
                           style={receiveStyles.saBox}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        >
-                          <CustomeText
-                            fontFamily="Okra-Bold"
-                            fontSize={16}
-                            color="#fff"
-                            variant="h6"
-                            style={{}}
-                            onLayout={() => {}}
-                            numberOfLines={1}
-                          >
-                            TQ
-                          </CustomeText>
-                        </LinearGradient>
-                        <Animated.View
-                          style={[
-                            receiveStyles.waveIconWrapper,
-                            {
-                              transform: [
-                                { scale: wifiPulse },
-                                { rotate: '45deg' },
-                              ],
-                            },
-                          ]}
-                        >
-                          <Icon
-                            name="wifi"
-                            iconFamily="Ionicons"
-                            size={12}
-                            color="#00E5FF"
-                          />
-                        </Animated.View>
+                        />
                       </View>
-                      <View style={receiveStyles.titleColumn}>
+                      <View
+                        style={[
+                          receiveStyles.titleColumn,
+                          { left: -width * 0.02 },
+                        ]}
+                      >
                         <CustomeText
                           variant="h6"
                           fontSize={14}
@@ -698,7 +676,7 @@ const receiveStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    marginRight: 15,
+    marginRight: 12,
   },
   brandingContainer: {
     flexDirection: 'row',
@@ -712,8 +690,8 @@ const receiveStyles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    // justifyContent: 'center',
+    // alignItems: 'center',
   },
   waveIconWrapper: {
     position: 'absolute',
@@ -724,9 +702,9 @@ const receiveStyles = StyleSheet.create({
     marginLeft: 8,
   },
   iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
