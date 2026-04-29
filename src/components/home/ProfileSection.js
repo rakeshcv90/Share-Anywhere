@@ -69,7 +69,7 @@ const ProfileSection = () => {
               source={{ uri: 'https://api.dicebear.com/7.x/avataaars/png?seed=Felix&backgroundColor=b6e3f4' }}
               style={styles.avatarImage}
             />
-            <View style={[styles.statusDot, { backgroundColor: '#10B981', borderColor: colors.surface }]} />
+            <div style={[styles.statusDot, { backgroundColor: '#10B981', borderColor: colors.surface }]} />
           </View>
           
           <View style={styles.userInfo}>

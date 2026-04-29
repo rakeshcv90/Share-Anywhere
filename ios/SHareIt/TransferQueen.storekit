@@ -1,0 +1,107 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "64A992D4",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6759137017",
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_developerTeamID" : "4P2UTHTKB7",
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 799150777.67406094,
+    "_locale" : "en_US",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "22048496",
+      "localizations" : [
+
+      ],
+      "name" : "TransferQueen",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6763245202",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited transfers, no ads, up to 3 users",
+              "displayName" : "Basic Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "basic_99",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Basic",
+          "subscriptionGroupID" : "22048496",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6763248244",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "All unlimited features with priority support",
+              "displayName" : "Pro Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "pro_249",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro",
+          "subscriptionGroupID" : "22048496",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -62,7 +62,9 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun stopTransfer(id: String) {
         activeTransfers[id] = false
-        pausedTransfers[id] = false // unblock if killed while paused
+        pausedTransfers[id] = false 
+        // Also stop any specific threads for this ID
+        activeTransfers.keys.forEach { if (it.startsWith("$id|")) activeTransfers[it] = false }
         Log.d(TAG, "Stop signal received for: $id")
     }
 
@@ -84,15 +86,16 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun sendFile(id: String, path: String, host: String, port: Int) {
+        val transferKey = "$id|$host|$port"
         ioPool.execute {
-            activeTransfers[id] = true
+            activeTransfers[transferKey] = true
             var socket: Socket? = null
             var channel: FileChannel? = null
             var inputStream: InputStream? = null
             var output: BufferedOutputStream? = null
 
             try {
-                if (activeTransfers[id] != true) return@execute
+                if (activeTransfers[transferKey] != true || activeTransfers[id] == false) return@execute
 
                 val isContentUri = path.startsWith("content://")
                 var fileSize: Long = -1
@@ -129,7 +132,7 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
 
                 // ── Connect with retry instead of blanket sleep ──
                 socket = connectWithRetry(host, port)
-                if (activeTransfers[id] != true) return@execute
+                if (activeTransfers[transferKey] != true || activeTransfers[id] == false) return@execute
 
                 tuneSocket(socket)
 
@@ -145,10 +148,10 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
                     val directBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE)
                     while (channel.read(directBuffer) != -1) {
                         while (pausedTransfers[id] == true) {
-                            if (activeTransfers[id] != true) break
+                            if (activeTransfers[transferKey] != true || activeTransfers[id] == false) break
                             Thread.sleep(150)
                         }
-                        if (activeTransfers[id] != true) {
+                        if (activeTransfers[transferKey] != true || activeTransfers[id] == false) {
                             Log.d(TAG, "Interrupted during send: $id")
                             break
                         }
@@ -171,10 +174,10 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
                     var bytesRead: Int
                     while (inputStream.read(transferArray).also { bytesRead = it } != -1) {
                         while (pausedTransfers[id] == true) {
-                            if (activeTransfers[id] != true) break
+                            if (activeTransfers[transferKey] != true || activeTransfers[id] == false) break
                             Thread.sleep(150)
                         }
-                        if (activeTransfers[id] != true) {
+                        if (activeTransfers[transferKey] != true || activeTransfers[id] == false) {
                             Log.d(TAG, "Interrupted during send: $id")
                             break
                         }
@@ -192,7 +195,7 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
 
                 output.flush()
 
-                if (activeTransfers[id] == true) {
+                if (activeTransfers[transferKey] == true && activeTransfers[id] != false) {
                     val reportSize = if (fileSize > 0) fileSize else totalSent
                     emitProgress(id, reportSize, reportSize, "send")
                     emitEvent("onTurboComplete", Arguments.createMap().apply {
@@ -204,14 +207,14 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
 
             } catch (e: Exception) {
                 Log.e(TAG, "SEND ERROR [$id]: ${e.message}", e)
-                if (activeTransfers[id] == true) {
+                if (activeTransfers[transferKey] == true && activeTransfers[id] != false) {
                     emitEvent("onTurboError", Arguments.createMap().apply {
                         putString("id", id)
                         putString("error", e.message ?: "Unknown Sender Error")
                     })
                 }
             } finally {
-                activeTransfers.remove(id)
+                activeTransfers.remove(transferKey)
                 try { channel?.close() } catch (_: Exception) {}
                 try { inputStream?.close() } catch (_: Exception) {}
                 try { output?.close() } catch (_: Exception) {}

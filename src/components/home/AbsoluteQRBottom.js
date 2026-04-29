@@ -86,31 +86,71 @@ const AbsoluteQRBottom = ({ onScanQR, onShareQR }) => {
             onPress={() => navigate('ReceivedFileScreen')}
             activeOpacity={0.7}
           >
-            <Icon name="folder-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
-            <Text style={[styles.navText, { color: colors.subtext }]}>Files</Text>
+            <Icon
+              name="folder-outline"
+              iconFamily="Ionicons"
+              color={colors.subtext}
+              size={24}
+            />
+            <Text style={[styles.navText, { color: colors.subtext }]}>
+              Files
+            </Text>
           </TouchableOpacity>
 
           {/* Item 3: Connections */}
           {Platform.OS !== 'ios' && (
             <TouchableOpacity
               style={styles.navItem}
-              onPress={() => navigate(isConnected ? 'ConnectionScreen' : 'ConnectionHubScreen')}
+              onPress={() =>
+                navigate(
+                  isConnected ? 'ConnectionScreen' : 'ConnectionHubScreen',
+                )
+              }
               activeOpacity={0.7}
             >
-              <Icon name="people-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
-              <Text style={[styles.navText, { color: colors.subtext }]}>Network</Text>
+              <Icon
+                name="people-outline"
+                iconFamily="Ionicons"
+                color={colors.subtext}
+                size={24}
+              />
+              <Text style={[styles.navText, { color: colors.subtext }]}>
+                Network
+              </Text>
             </TouchableOpacity>
           )}
 
+          {/* Item: Subscription */}
+          <TouchableOpacity
+            style={styles.navItem}
+            activeOpacity={0.7}
+            onPress={() => navigate('SubscriptionScreen')}
+          >
+            <Icon
+              name="diamond-outline"
+              iconFamily="Ionicons"
+              color={colors.subtext}
+              size={24}
+            />
+            <Text style={[styles.navText, { color: colors.subtext }]}>
+              Premium
+            </Text>
+          </TouchableOpacity>
 
-          {/* Item 4: Profile */}
-          <TouchableOpacity 
-            style={styles.navItem} 
+          <TouchableOpacity
+            style={styles.navItem}
             activeOpacity={0.7}
             onPress={() => navigate('ProfileScreen')}
           >
-            <Icon name="person-outline" iconFamily="Ionicons" color={colors.subtext} size={24} />
-            <Text style={[styles.navText, { color: colors.subtext }]}>Profile</Text>
+            <Icon
+              name="person-outline"
+              iconFamily="Ionicons"
+              color={colors.subtext}
+              size={24}
+            />
+            <Text style={[styles.navText, { color: colors.subtext }]}>
+              Profile
+            </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

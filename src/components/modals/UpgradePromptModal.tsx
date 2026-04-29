@@ -20,7 +20,7 @@ interface UpgradePromptModalProps {
   onClose: () => void;
   title?: string;
   message?: string;
-  type?: 'transfer_limit' | 'user_limit';
+  type?: 'transfer_limit' | 'user_limit' | 'file_size';
 }
 
 const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
@@ -73,10 +73,26 @@ const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
       // Shake icon
       Animated.sequence([
         Animated.delay(400),
-        Animated.timing(iconRotate, { toValue: 1, duration: 100, useNativeDriver: true }),
-        Animated.timing(iconRotate, { toValue: -1, duration: 100, useNativeDriver: true }),
-        Animated.timing(iconRotate, { toValue: 1, duration: 100, useNativeDriver: true }),
-        Animated.timing(iconRotate, { toValue: 0, duration: 100, useNativeDriver: true }),
+        Animated.timing(iconRotate, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(iconRotate, {
+          toValue: -1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(iconRotate, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(iconRotate, {
+          toValue: 0,
+          duration: 100,
+          useNativeDriver: true,
+        }),
       ]).start();
     } else {
       // Close
@@ -103,12 +119,18 @@ const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
   };
 
   const defaultTitle =
-    type === 'user_limit' ? 'User Limit Reached' : 'Upgrade to Continue';
+    type === 'user_limit'
+      ? 'User Limit Reached'
+      : type === 'file_size'
+      ? 'File Too Large'
+      : 'Upgrade to Continue';
 
   const defaultMessage =
     type === 'user_limit'
-      ? 'Your Basic plan allows up to 3 connected users. Upgrade to Pro for unlimited connections.'
-      : 'You\'ve used your free file transfer. Subscribe to a plan for unlimited transfers.';
+      ? 'Your current plan limits connected users. Upgrade to Pro for unlimited connections.'
+      : type === 'file_size'
+      ? "This file exceeds your plan's size limit. Upgrade to send larger files."
+      : "You've reached your daily transfer limit. Subscribe to a plan for unlimited transfers.";
 
   const rotate = iconRotate.interpolate({
     inputRange: [-1, 0, 1],
@@ -116,18 +138,24 @@ const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
   });
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      onRequestClose={onClose}
+    >
       {/* Backdrop */}
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]}>
-        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          activeOpacity={1}
+        />
       </Animated.View>
 
       {/* Content */}
       <Animated.View
-        style={[
-          styles.contentWrap,
-          { transform: [{ translateY: slideAnim }] },
-        ]}
+        style={[styles.contentWrap, { transform: [{ translateY: slideAnim }] }]}
       >
         <View style={styles.card}>
           {/* Lock Icon */}
@@ -138,13 +166,23 @@ const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
             ]}
           >
             <LinearGradient
-              colors={type === 'user_limit' ? ['#F59E0B', '#D97706'] : ['#FF6B6B', '#EF4444']}
+              colors={
+                type === 'user_limit'
+                  ? ['#F59E0B', '#D97706']
+                  : ['#FF6B6B', '#EF4444']
+              }
               style={styles.lockGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <Icon
-                name={type === 'user_limit' ? 'people' : 'lock-closed'}
+                name={
+                  type === 'user_limit'
+                    ? 'people'
+                    : type === 'file_size'
+                    ? 'cloud-upload'
+                    : 'lock-closed'
+                }
                 iconFamily="Ionicons"
                 size={32}
                 color="#fff"
@@ -168,14 +206,23 @@ const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
           <Text style={styles.message}>{message || defaultMessage}</Text>
 
           {/* CTA */}
-          <TouchableOpacity activeOpacity={0.85} onPress={handleViewPlans} style={styles.ctaWrap}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={handleViewPlans}
+            style={styles.ctaWrap}
+          >
             <LinearGradient
               colors={['#0072FF', '#00D2FF']}
               style={styles.ctaBtn}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Icon name="diamond-outline" iconFamily="Ionicons" size={18} color="#fff" />
+              <Icon
+                name="diamond-outline"
+                iconFamily="Ionicons"
+                size={18}
+                color="#fff"
+              />
               <Text style={styles.ctaText}>View Plans</Text>
             </LinearGradient>
           </TouchableOpacity>

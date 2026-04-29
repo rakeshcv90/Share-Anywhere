@@ -17,6 +17,27 @@ type MediaPickedCallback = (media: Asset) => void;
 type FilePickedCallback = (file: any) => void;
 
 export const pickImage = (onMediaPickedUp: (media: Asset[]) => void) => {
+  if (Platform.OS === 'macos') {
+    // 🖥️ macOS: Use document picker for images since gallery library picker is mobile-only
+    pick({
+      type: ['public.image'],
+      allowMultiSelection: true,
+    }).then(files => {
+      if (files && files.length > 0) {
+        const assets = files.map((f: any) => ({
+          uri: f.uri,
+          fileName: f.name,
+          fileSize: f.size ? Number(f.size) : 0,
+          type: f.type || 'image/jpeg',
+          name: f.name,
+          size: f.size ? Number(f.size) : 0,
+        }));
+        onMediaPickedUp(assets as any);
+      }
+    }).catch(err => console.log('MacOS Image pick error:', err));
+    return;
+  }
+
   launchImageLibrary(
     {
       mediaType: 'photo',
@@ -48,6 +69,27 @@ export const pickImage = (onMediaPickedUp: (media: Asset[]) => void) => {
 };
 export const pickVideo = async (onMediaPickedUp: (media: Asset[]) => void) => {
   try {
+    if (Platform.OS === 'macos') {
+      // 🖥️ macOS: Use document picker for videos
+      const files = await pick({
+        type: ['public.movie', 'public.video'],
+        allowMultiSelection: true,
+      });
+
+      if (files && files.length > 0) {
+        const assets = files.map((f: any) => ({
+          uri: f.uri,
+          fileName: f.name,
+          fileSize: f.size ? Number(f.size) : 0,
+          type: f.type || 'video/mp4',
+          name: f.name,
+          size: f.size ? Number(f.size) : 0,
+        }));
+        onMediaPickedUp(assets as any);
+      }
+      return;
+    }
+
     if (Platform.OS === 'ios') {
       // 🍎 iOS: Use image library picker — the document picker (Files app) does NOT show
       // Photos library videos. launchImageLibrary accesses the camera roll where videos live.
@@ -118,9 +160,9 @@ export const pickAudio = async (onFilePickedUp: (files: any[]) => void) => {
     await new Promise<void>(resolve => setTimeout(() => resolve(), 200));
     
     const files = await pick({
-      type: Platform.OS === 'ios' ? ['public.audio'] : ['*/*', 'audio/*'],
+      type: Platform.OS === 'ios' || Platform.OS === 'macos' ? ['public.audio'] : ['*/*', 'audio/*'],
       allowMultiSelection: true,
-      copyTo: Platform.OS === 'ios' ? 'cachesDirectory' : undefined,
+      copyTo: Platform.OS === 'ios' || Platform.OS === 'macos' ? 'cachesDirectory' : undefined,
     });
 
     onFilePickedUp(files);
@@ -136,8 +178,8 @@ export const pickDocument = async (onFilePickedUp: (files: any[]) => void) => {
 
     const pickResults = await pick({
       allowMultiSelection: true,
-      type: Platform.OS === 'ios' ? ['public.item', 'public.content', 'public.data'] : ['*/*'],
-      copyTo: Platform.OS === 'ios' ? 'cachesDirectory' : undefined,
+      type: Platform.OS === 'ios' || Platform.OS === 'macos' ? ['public.item', 'public.content', 'public.data'] : ['*/*'],
+      copyTo: Platform.OS === 'ios' || Platform.OS === 'macos' ? 'cachesDirectory' : undefined,
     });
     onFilePickedUp(pickResults);
   } catch (err: unknown) {
@@ -322,7 +364,7 @@ export const checkFilePermissions = async (): Promise<boolean> => {
         }
       }
     } else {
-      // Other platforms, just allow
+      // macOS or other platforms: Assume granted or handled by sandbox entitlements
       return true;
     }
   } catch (error) {

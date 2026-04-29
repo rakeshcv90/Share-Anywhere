@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { TouchableOpacity, Text, BackHandler } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import HomeHeader from '../components/home/HomeHeader';
 import { useTCP } from '../service/TCPProvider';
 import { navigate } from '../utils/NavigationUtil';
@@ -43,10 +43,10 @@ const HomeScreen = () => {
   const [isThemeVisible, setThemeVisible] = useState(false);
   const [isExitVisible, setExitVisible] = useState(false);
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const { checkSharedFiles, pendingSharedFiles, isConnected, connectedDevice } =
     useTCP();
 
-  // 🚀 Handle incoming share URL with a delay for UserDefaults sync
   const handleShareURL = useCallback(
     url => {
       if (
@@ -54,8 +54,6 @@ const HomeScreen = () => {
         typeof url === 'string' &&
         url.startsWith('shareanywhere://')
       ) {
-        console.log('--- iOS Share: Received deep link:', url);
-        // Delay to allow UserDefaults to sync between extension and main app processes
         setTimeout(() => {
           checkSharedFiles();
         }, 500);
@@ -64,40 +62,31 @@ const HomeScreen = () => {
     [checkSharedFiles],
   );
 
-  // Request Location permissions on mount for Wi-Fi SSID detection
   useEffect(() => {
     import('../utils/Constants').then(({ requestLocationPermission }) => {
       requestLocationPermission();
     });
   }, []);
 
-  // 🚀 Direct Share Monitor
   useEffect(() => {
-    // Check on initial mount
     checkSharedFiles();
 
-    // Handle cold launch via URL scheme (app was killed, opened via share extension)
     if (Platform.OS === 'ios') {
       Linking.getInitialURL().then(url => {
         if (url) {
-          console.log('--- iOS Share: Cold launch URL:', url);
           handleShareURL(url);
         }
       });
     }
 
-    // Handle URL when app is already running (background or foreground)
     const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
       handleShareURL(url);
     });
 
-    // Check whenever app returns to foreground (fallback for non-URL opens)
     const appStateSubscription = AppState.addEventListener(
       'change',
       nextAppState => {
         if (nextAppState === 'active') {
-          console.log('--- App Resumed: Checking for shared files...');
-          // Small delay for UserDefaults sync
           setTimeout(() => {
             checkSharedFiles();
           }, 300);
@@ -111,7 +100,6 @@ const HomeScreen = () => {
     };
   }, [checkSharedFiles, handleShareURL]);
 
-  // 🚀 Auto-Navigate if files are found
   useEffect(() => {
     if (pendingSharedFiles.length > 0 && !isConnected) {
       console.log(
@@ -122,10 +110,8 @@ const HomeScreen = () => {
   }, [pendingSharedFiles.length, isConnected]);
 
   const inAppUpdates = React.useRef(null);
-  // Removed static bgAnim for theme compatibility
-  useEffect(() => {
-    // ... any other mount logic if needed
-  }, []);
+
+  useEffect(() => {}, []);
 
   useEffect(() => {
     inAppUpdates.current = new SpInAppUpdates(false);
@@ -142,7 +128,6 @@ const HomeScreen = () => {
 
   const onStatusUpdate = useCallback(event => {
     const { status, bytesDownloaded, totalBytesToDownload } = event;
-    console.log(`Update Status: ${status}`, event);
 
     if (status === IAUInstallStatus.DOWNLOADING && totalBytesToDownload > 0) {
       const progress = Math.round(
@@ -188,6 +173,17 @@ const HomeScreen = () => {
       return () => subscription.remove();
     }, []),
   );
+
+  // Catch iOS swipe-to-go-back gesture and Android navigation back
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', e => {
+      if (e.data.action.type === 'GO_BACK') {
+        e.preventDefault();
+        setExitVisible(true);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const checkForUpdate = async () => {
     try {

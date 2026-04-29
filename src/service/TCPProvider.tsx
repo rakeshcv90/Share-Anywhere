@@ -38,9 +38,9 @@ const CHUNK_SIZE = 512 * 1024; // 🚀 512 KB per chunk (Turbo Optimized)
 const WINDOW_SIZE = 24; // 🚀 24 chunks in-flight (12MB) — Dynamic safety for iPhone receivers
 interface TCPContextType {
   server: any;
-  client: any;
+  clients: any[];
   isConnected: boolean;
-  connectedDevice: any;
+  connectedDevices: any[];
   sentFiles: any;
   receivedFiles: any;
   totalSentBytes: number;
@@ -84,10 +84,10 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [server, setServer] = useState<any>(null);
-  const [client, setClient] = useState<any>(null);
-  const [serverSocket, setServerSocket] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [serverSockets, setServerSockets] = useState<any[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectedDevice, setConnectedDevice] = useState<any>(null);
+  const [connectedDevices, setConnectedDevices] = useState<any[]>([]);
   const [sentFiles, setSentFiles] = useState<any[]>([]);
   const [receivedFiles, setReceivedFiles] = useState<any[]>([]);
   const [totalSentBytes, setTotalSentBytes] = useState(0);
@@ -98,6 +98,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   const [activeFileTotalSize, setActiveFileTotalSize] = useState(0);
   const [activeFileTransferredBytes, setActiveFileTransferredBytes] =
     useState(0);
+  const activeReceivers = useRef<Set<any>>(new Set());
   const {
     currentChunkSet,
     setCurrentChunkSet,
@@ -108,7 +109,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   } = useChunkStore();
   const [pendingSharedFiles, setPendingSharedFiles] = useState<any[]>([]);
 
-  const activeSocket = useRef<any>(null);
+  const allSockets = useRef<any[]>([]);
   const sentFilesRef = useRef<any[]>([]);
   const tempPathsRef = useRef<Record<string, string>>({});
   const handlePacketRef = useRef<any>(null);
@@ -117,8 +118,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
   const lastTurboUIUpdate = useRef<number>(0);
 
   useEffect(() => {
-    activeSocket.current = client || serverSocket;
-  }, [client, serverSocket]);
+    allSockets.current = [...clients, ...serverSockets];
+    setIsConnected(allSockets.current.length > 0);
+  }, [clients, serverSockets]);
 
   useEffect(() => {
     sentFilesRef.current = sentFiles;
@@ -242,7 +244,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  const getSocket = useCallback(() => activeSocket.current, []);
+  const getSockets = useCallback(() => allSockets.current, []);
 
   const getSocketStatus = useCallback((socket: any) => {
     if (!socket) return false;
@@ -281,11 +283,14 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
   const sendMessage = useCallback(
     (message: any) => {
-      const socket = getSocket();
-      if (!socket) return;
-      safeWrite(socket, `${JSON.stringify(message)}\n`);
+      const sockets = getSockets();
+      if (sockets.length === 0) return;
+      const payload = `${JSON.stringify(message)}\n`;
+      sockets.forEach(socket => {
+        safeWrite(socket, payload);
+      });
     },
-    [getSocket, safeWrite],
+    [getSockets, safeWrite],
   );
 
   const generateFile = useCallback(async () => {
@@ -460,7 +465,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           setTotalReceivedBytes((prev: number) => prev + delta);
         } else {
           // Fallback if data.type is missing but we shouldn't hit this
-          if (activeSocket.current === client) {
+          if (clients.length > 0) {
             setTotalSentBytes((prev: number) => prev + delta);
           } else {
             setTotalReceivedBytes((prev: number) => prev + delta);
@@ -490,7 +495,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
           handleNativeComplete();
         } else {
           // Fallback if type is missing (e.g. old build)
-          if (activeSocket.current === client) {
+          if (clients.includes(allSockets.current[0])) {
             setActiveFileTransferredBytes(activeFileTotalSize);
           } else {
             handleNativeComplete();
@@ -510,7 +515,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         turboFallbackTimer.current = null;
       }
 
-      const socket = activeSocket.current;
+      const socket = allSockets.current[0];
       if (socket) {
         console.log('--- NATIVE ERROR: Falling back to JS loop.');
         sendChunkAck(
@@ -529,7 +534,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       subComplete.remove();
       subError.remove();
     };
-  }, [client, generateFile]);
+  }, [clients, generateFile]);
 
   const handlePacket = useCallback(
     async (parsedData: any, socket: any) => {
@@ -545,8 +550,11 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       }
 
       if (parsedData?.event === 'connect') {
-        setIsConnected(true);
-        setConnectedDevice(parsedData?.deviceName);
+        setConnectedDevices(prev => {
+          // Avoid duplicates
+          if (prev.some(d => d.socket === socket)) return prev;
+          return [...prev, { socket, name: parsedData.deviceName }];
+        });
       }
 
       switch (parsedData.event) {
@@ -655,6 +663,12 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
             );
             return;
           }
+          
+          // Track this receiver as active if not already
+          if (!activeReceivers.current.has(socket)) {
+            activeReceivers.current.add(socket);
+          }
+
           sendChunkAck(
             parsedData.chunkNo,
             parsedData.windowSize ?? 1,
@@ -691,65 +705,67 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         }
         case 'file_completed': {
           console.log('--- Event: file_completed, target id:', parsedData.id);
-          // Clear safety timeout since transfer completed successfully
-          if (safetyTimeoutRef.current) {
-            clearTimeout(safetyTimeoutRef.current);
-            safetyTimeoutRef.current = null;
-          }
-          const tempPath = tempPathsRef.current[parsedData.id];
-          if (tempPath) {
-            const cleanPath =
-              Platform.OS === 'android'
-                ? tempPath.replace('file://', '')
-                : tempPath;
+          
+          // Remove this receiver from active list
+          activeReceivers.current.delete(socket);
 
-            console.log('--- ID Match! Cleaning up:', cleanPath);
-            RNFS.unlink(cleanPath)
-              .then(() => {
-                console.log('--- Success: Temp file deleted ✅');
-                delete tempPathsRef.current[parsedData.id];
-              })
-              .catch(err =>
-                console.log('--- Error: Unlink failed ❌:', err?.message),
-              );
-          } else {
-            console.log(
-              '--- No direct ref for ID:',
-              parsedData.id,
-              '. Checking sentFiles...',
-            );
-            const completedFile = sentFilesRef.current?.find(
-              f => f.id === parsedData.id,
-            );
-            if (
-              completedFile?.uri &&
-              completedFile.uri.includes(RNFS.CachesDirectoryPath)
-            ) {
+          // Only cleanup if ALL receivers are done
+          if (activeReceivers.current.size === 0) {
+            if (safetyTimeoutRef.current) {
+              clearTimeout(safetyTimeoutRef.current);
+              safetyTimeoutRef.current = null;
+            }
+            const tempPath = tempPathsRef.current[parsedData.id];
+            if (tempPath) {
               const cleanPath =
                 Platform.OS === 'android'
-                  ? completedFile.uri.replace('file://', '')
-                  : completedFile.uri;
-              console.log('--- Found in sentFiles, unlinking:', cleanPath);
-              RNFS.unlink(cleanPath).catch(() => {});
-            }
-          }
-          setSentFiles((prev: any[]) =>
-            prev.map(file =>
-              file.id === parsedData.id ? { ...file, available: true } : file,
-            ),
-          );
+                  ? tempPath.replace('file://', '')
+                  : tempPath;
 
-          // 🛡️ BATCH STABILITY COOL-DOWN
-          // Delay resetting chunk state so the SENDER waits 500ms before starting next item
-          console.log(
-            '--- TCP: Cooldown before processing next item in batch...',
-          );
-          setTimeout(() => {
-            resetCurrentChunkSet();
-            setActiveFileId(null);
-            setActiveFileTotalSize(0);
-            setActiveFileTransferredBytes(0);
-          }, 500);
+              console.log('--- ID Match! All receivers done. Cleaning up:', cleanPath);
+              RNFS.unlink(cleanPath)
+                .then(() => {
+                  console.log('--- Success: Temp file deleted ✅');
+                  delete tempPathsRef.current[parsedData.id];
+                })
+                .catch(err =>
+                  console.log('--- Error: Unlink failed ❌:', err?.message),
+                );
+            } else {
+              const completedFile = sentFilesRef.current?.find(
+                f => f.id === parsedData.id,
+              );
+              if (
+                completedFile?.uri &&
+                completedFile.uri.includes(RNFS.CachesDirectoryPath)
+              ) {
+                const cleanPath =
+                  Platform.OS === 'android'
+                    ? completedFile.uri.replace('file://', '')
+                    : completedFile.uri;
+                console.log('--- Found in sentFiles, all done, unlinking:', cleanPath);
+                RNFS.unlink(cleanPath).catch(() => {});
+              }
+            }
+            
+            setSentFiles((prev: any[]) =>
+              prev.map(file =>
+                file.id === parsedData.id ? { ...file, available: true } : file,
+              ),
+            );
+
+            console.log(
+              '--- TCP: All receivers completed. Cooldown...',
+            );
+            setTimeout(() => {
+              resetCurrentChunkSet();
+              setActiveFileId(null);
+              setActiveFileTotalSize(0);
+              setActiveFileTransferredBytes(0);
+            }, 500);
+          } else {
+            console.log(`--- TCP: Receiver completed, but ${activeReceivers.current.size} still active.`);
+          }
           break;
         }
         case 'turbo_ready': {
@@ -802,6 +818,12 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
               console.log(
                 `--- NATIVE: Starting turbo-speed send reliably routed to: ${realTargetIp}:${parsedData.port}`,
               );
+              
+              // Track this receiver as active
+              if (!activeReceivers.current.has(socket)) {
+                activeReceivers.current.add(socket);
+              }
+
               TurboTransfer.sendFile(
                 parsedData.id,
                 turboChunkSet.filePath,
@@ -873,7 +895,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     },
     [
       setIsConnected,
-      setConnectedDevice,
+      setConnectedDevices,
       setReceivedFiles,
       setTotalSentBytes,
       setTotalReceivedBytes,
@@ -887,7 +909,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       sentFiles,
       receivedFiles,
       isConnected,
-      connectedDevice,
+      connectedDevices,
       batchTotalFiles,
       batchTotalSize,
     ],
@@ -955,8 +977,8 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       setActiveFileId(null);
 
       const newServer = TcpSocket.createServer(socket => {
-        console.log('Client connected');
-        setServerSocket(socket);
+        console.log('Client connected to server');
+        setServerSockets(prev => [...prev, socket]);
 
         // Configure socket safely inside the callback
         if (socket) {
@@ -968,30 +990,38 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         makeFramedReader(socket);
 
         socket.on('close', () => {
-          console.log('Client disconnected (socket closed)');
-          setIsConnected(false);
-          setConnectedDevice(null);
-          setReceivedFiles([]);
-          setSentFiles([]);
-          setBatchTotalFiles(0);
-          setBatchTotalSize(0);
-          setTotalReceivedBytes(0);
-          setTotalSentBytes(0);
-          setActiveFileId(null);
-          cleanupCache(); // Trigger cleanup when disconnected
+          console.log('Client disconnected from server (socket closed)');
+          setServerSockets(prev => prev.filter(s => s !== socket));
+          setConnectedDevices(prev => prev.filter(d => d.socket !== socket));
+          
+          // Cleanup active transfer tracking
+          activeReceivers.current.delete(socket);
+          if (activeReceivers.current.size === 0 && activeFileId) {
+            console.log('--- TCP: All active receivers gone after disconnect. Resetting...');
+            setTimeout(() => {
+              resetCurrentChunkSet();
+              setActiveFileId(null);
+            }, 500);
+          }
+
+          // Only reset global state if no sockets left
+          if (allSockets.current.length <= 1) {
+            setReceivedFiles([]);
+            setSentFiles([]);
+            setBatchTotalFiles(0);
+            setBatchTotalSize(0);
+            setTotalReceivedBytes(0);
+            setTotalSentBytes(0);
+            setActiveFileId(null);
+            cleanupCache();
+          }
         });
 
         socket.on('error', err => {
           console.log('Server socket error:', err);
-          setIsConnected(false);
-          setConnectedDevice(null);
-          setReceivedFiles([]);
-          setSentFiles([]);
-          setBatchTotalFiles(0);
-          setBatchTotalSize(0);
-          setTotalReceivedBytes(0);
-          setTotalSentBytes(0);
-          setActiveFileId(null);
+          setServerSockets(prev => prev.filter(s => s !== socket));
+          setConnectedDevices(prev => prev.filter(d => d.socket !== socket));
+          activeReceivers.current.delete(socket);
         });
       });
 
@@ -1009,8 +1039,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
   const connectToServer = useCallback(
     (host: string, port: number, deviceName: string) => {
-      if (client) return;
-
+      // Allow multiple connections even if one exists
       setBatchTotalFiles(0);
       setBatchTotalSize(0);
       setTotalReceivedBytes(0);
@@ -1018,9 +1047,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       setActiveFileId(null);
 
       const newClient = TcpSocket.connect({ host, port }, () => {
-        console.log('Connected to server');
-        setIsConnected(true);
-        setConnectedDevice(deviceName);
+        console.log('Connected to server:', deviceName);
+        setClients(prev => [...prev, newClient]);
+        setConnectedDevices(prev => [...prev, { socket: newClient, name: deviceName }]);
 
         const myDeviceName = DeviceInfo.getDeviceNameSync();
         const msg = {
@@ -1032,7 +1061,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
       // Configure socket safely
       if (newClient) {
-        console.log('--- TCP: Configuring client socket...');
+        console.log('--- TCP: Configuring clients socket...');
         safeSocketCall(newClient, 'setNoDelay', true);
         safeSocketCall(newClient, 'setKeepAlive', true);
         safeSocketCall(newClient, 'setTimeout', 0);
@@ -1040,56 +1069,60 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       makeFramedReader(newClient);
 
       newClient.on('close', () => {
-        console.log('Connected to server (socket closed)');
-        setIsConnected(false);
-        setConnectedDevice(null);
-        setClient(null);
-        setReceivedFiles([]);
-        setSentFiles([]);
-        setBatchTotalFiles(0);
-        setBatchTotalSize(0);
-        setTotalReceivedBytes(0);
-        setTotalSentBytes(0);
-        setActiveFileId(null);
-        cleanupCache(); // Trigger cleanup when disconnected
+        console.log('Disconnected from server (socket closed):', deviceName);
+        setClients(prev => prev.filter(c => c !== newClient));
+        setConnectedDevices(prev => prev.filter(d => d.socket !== newClient));
+        
+        // Cleanup active transfer tracking
+        activeReceivers.current.delete(newClient);
+        if (activeReceivers.current.size === 0 && activeFileId) {
+          console.log('--- TCP: All active receivers gone after client disconnect. Resetting...');
+          setTimeout(() => {
+            resetCurrentChunkSet();
+            setActiveFileId(null);
+          }, 500);
+        }
+
+        if (allSockets.current.length <= 1) {
+          setReceivedFiles([]);
+          setSentFiles([]);
+          setBatchTotalFiles(0);
+          setBatchTotalSize(0);
+          setTotalReceivedBytes(0);
+          setTotalSentBytes(0);
+          setActiveFileId(null);
+          cleanupCache();
+        }
       });
 
       newClient.on('error', err => {
         console.log('Client socket error:', err);
-        setIsConnected(false);
-        setClient(null);
-        setReceivedFiles([]);
-        setSentFiles([]);
-        setBatchTotalFiles(0);
-        setBatchTotalSize(0);
-        setTotalReceivedBytes(0);
-        setTotalSentBytes(0);
-        setActiveFileId(null);
+        setClients(prev => prev.filter(c => c !== newClient));
+        setConnectedDevices(prev => prev.filter(d => d.socket !== newClient));
+        activeReceivers.current.delete(newClient);
       });
-
-      setClient(newClient);
     },
-    [client, makeFramedReader, setReceivedFiles, setSentFiles],
+    [makeFramedReader, setReceivedFiles, setSentFiles],
   );
 
   const disconnect = useCallback(() => {
-    if (client) {
-      client.removeAllListeners();
-      client.destroy();
-    }
-    if (serverSocket) {
-      serverSocket.removeAllListeners();
-      serverSocket.destroy?.();
-    }
+    clients.forEach(c => {
+      c.removeAllListeners();
+      c.destroy();
+    });
+    serverSockets.forEach(s => {
+      s.removeAllListeners();
+      s.destroy?.();
+    });
     if (server) {
       server.removeAllListeners?.();
       server.close();
     }
-    setClient(null);
+    setClients([]);
+    setServerSockets([]);
     setServer(null);
-    setServerSocket(null);
     setIsConnected(false);
-    setConnectedDevice(null);
+    setConnectedDevices([]);
     setSentFiles([]);
     setReceivedFiles([]);
     setTotalReceivedBytes(0);
@@ -1105,8 +1138,8 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     sendQueue.current = [];
     cleanupCache(); // Trigger cleanup when disconnecting
     useChunkStore.getState().setPaused(false); // Reset pause on disconnect
-    console.log('--- TCP State Disconnected & Reset');
-  }, [client, server, serverSocket, setCurrentChunkSet, setChunkStore]);
+    console.log('--- TCP State Disconnected & Reset (All)');
+  }, [clients, serverSockets, server, setCurrentChunkSet, setChunkStore]);
 
   const togglePause = useCallback(() => {
     const { isPaused: currentPaused, togglePause: toggle } =
@@ -1133,7 +1166,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
       // JS FALLBACK RESUME: Trigger the next chunk window
       const state = useChunkStore.getState();
-      const socket = getSocket();
+      const socket = getSockets()[0];
       if (
         state.currentChunkSet &&
         state.currentChunkSet.lastChunkNo !== undefined &&
@@ -1154,7 +1187,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     }
   }, [
     sendMessage,
-    getSocket,
+    getSockets,
     setTotalSentBytes,
     setSentFiles,
     setActiveFileTransferredBytes,
@@ -1262,7 +1295,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
         processNextInQueue();
       }
     },
-    [getSocket, sendMessage, processNextInQueue, sentFiles],
+    [getSockets, sendMessage, processNextInQueue, sentFiles],
   );
 
   const sendBatchAck = useCallback(
@@ -1458,7 +1491,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     }
 
     console.log('--- processFile started for:', name, 'ID:', id);
-    const socket = getSocket();
+    const socket = getSockets()[0];
     if (!socket) {
       console.log('--- processFile: No socket available!');
       isProcessing.current = false;
@@ -1620,14 +1653,11 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
 
       try {
         console.log('--- Sending handshake for (turbo fast-path):', name);
-        safeWrite(
-          socket,
-          JSON.stringify({
-            event: 'file_ack',
-            file: rawDataForAck,
-            senderPlatform: Platform.OS,
-          }) + '\n',
-        );
+        sendMessage({
+          event: 'file_ack',
+          file: rawDataForAck,
+          senderPlatform: Platform.OS,
+        });
         console.log('FILE ACKNOWLEDGE SENT ✅ (turbo fast-path):', name);
       } catch (error) {
         console.log('Error Sending Handshake:', error);
@@ -1833,14 +1863,11 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
       await new Promise<void>(resolve => setTimeout(() => resolve(), 250));
 
       console.log('--- Sending handshake for:', name);
-      safeWrite(
-        socket,
-        JSON.stringify({
-          event: 'file_ack',
-          file: rawDataForAck,
-          senderPlatform: Platform.OS,
-        }) + '\n',
-      );
+      sendMessage({
+        event: 'file_ack',
+        file: rawDataForAck,
+        senderPlatform: Platform.OS,
+      });
       console.log('FILE ACKNOWLEDGE SENT ✅:', name);
     } catch (error) {
       console.log('Error Sending Handshake:', error);
@@ -1854,9 +1881,9 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
     <TCPContext.Provider
       value={{
         server,
-        client,
+        clients,
         isConnected,
-        connectedDevice,
+        connectedDevices,
         sentFiles,
         receivedFiles,
         totalSentBytes,

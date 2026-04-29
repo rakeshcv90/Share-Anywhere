@@ -20,6 +20,8 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		97131FF7DDDD41128080B5DF /* Okra-MediumLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 737B70EF1FD342359B57C6AE /* Okra-MediumLight.ttf */; };
+		A50F9B0D2F9A113200E67825 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A50F9B0C2F9A113200E67825 /* StoreKit.framework */; };
+		A589A0BC2FA212AD003313D2 /* TransferQueen.storekit in Resources */ = {isa = PBXBuildFile; fileRef = A589A0BB2FA212AD003313D2 /* TransferQueen.storekit */; };
 		A5E8B6FB2F923C55001FCA5D /* LaunchScreen 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */; };
 		A5E8B6FD2F923C5D001FCA5D /* Info 2.plist in Resources */ = {isa = PBXBuildFile; fileRef = A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */; };
 		A63ED3F4D9C5690616C8B74E /* TurboTransferModule.m in Sources */ = {isa = PBXBuildFile; fileRef = F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */; };
@@ -71,6 +73,8 @@
 		8F183FB20A60D7E18081DFD7 /* ShareExtension.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ShareExtension.entitlements; sourceTree = "<group>"; };
 		93422CFD3158BF522FAF8951 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		97C79CF40BC8D85A57F9593A /* ShareViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		A50F9B0C2F9A113200E67825 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		A589A0BB2FA212AD003313D2 /* TransferQueen.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TransferQueen.storekit; sourceTree = "<group>"; };
 		A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "LaunchScreen 2.storyboard"; sourceTree = "<group>"; };
 		A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info 2.plist"; sourceTree = "<group>"; };
 		B29F6F3E4873283F1A7C64C5 /* libPods-ShareExtension.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ShareExtension.a"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,6 +92,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-SHareIt.a in Frameworks */,
+				A50F9B0D2F9A113200E67825 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -116,6 +121,7 @@
 				F3C5CA22E73890B0911ABE44 /* TurboTransferModule.m */,
 				A5E8B6FA2F923C55001FCA5D /* LaunchScreen 2.storyboard */,
 				A5E8B6FC2F923C5D001FCA5D /* Info 2.plist */,
+				A589A0BB2FA212AD003313D2 /* TransferQueen.storekit */,
 			);
 			path = SHareIt;
 			sourceTree = "<group>";
@@ -123,6 +129,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				A50F9B0C2F9A113200E67825 /* StoreKit.framework */,
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
 				5DCACB8F33CDC322A6C60F78 /* libPods-SHareIt.a */,
 				E92134756D8CEEA32F71FBEA /* iOS */,
@@ -295,6 +302,7 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				291BCA5F652F463CBE73CFF4 /* Okra-Medium.ttf in Resources */,
+				A589A0BC2FA212AD003313D2 /* TransferQueen.storekit in Resources */,
 				143E1ABA434E42469281AC8B /* Okra-ExtraBold.ttf in Resources */,
 				A5E8B6FB2F923C55001FCA5D /* LaunchScreen 2.storyboard in Resources */,
 				97131FF7DDDD41128080B5DF /* Okra-MediumLight.ttf in Resources */,

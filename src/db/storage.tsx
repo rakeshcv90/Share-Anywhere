@@ -18,6 +18,10 @@ export const STORAGE_KEYS = {
 
   // Transfer tracking
   TOTAL_TRANSFERS: 'total_transfers_count',
+
+  // Daily transfer tracking (for Free plan limit)
+  DAILY_TRANSFER_COUNT: 'daily_transfer_count',
+  DAILY_TRANSFER_DATE: 'daily_transfer_date',
 } as const;
 
 export const mmkvStorage = {
@@ -79,5 +83,40 @@ export const subscriptionStorage = {
 
   markFreeTransferUsed: () => {
     storage.set(STORAGE_KEYS.FREE_TRANSFER_USED, true);
+  },
+
+  // ── Daily Transfer Counter ──
+  getDailyTransferCount: (): number => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const storedDate = storage.getString(STORAGE_KEYS.DAILY_TRANSFER_DATE);
+
+    // Reset counter if it's a new day
+    if (storedDate !== today) {
+      storage.set(STORAGE_KEYS.DAILY_TRANSFER_DATE, today);
+      storage.set(STORAGE_KEYS.DAILY_TRANSFER_COUNT, 0);
+      return 0;
+    }
+
+    return storage.getNumber(STORAGE_KEYS.DAILY_TRANSFER_COUNT) ?? 0;
+  },
+
+  incrementDailyTransfer: (): number => {
+    const today = new Date().toISOString().split('T')[0];
+    const storedDate = storage.getString(STORAGE_KEYS.DAILY_TRANSFER_DATE);
+
+    let count = 0;
+    if (storedDate === today) {
+      count = storage.getNumber(STORAGE_KEYS.DAILY_TRANSFER_COUNT) ?? 0;
+    } else {
+      storage.set(STORAGE_KEYS.DAILY_TRANSFER_DATE, today);
+    }
+
+    count += 1;
+    storage.set(STORAGE_KEYS.DAILY_TRANSFER_COUNT, count);
+    return count;
+  },
+
+  getDailyTransferDate: (): string | null => {
+    return storage.getString(STORAGE_KEYS.DAILY_TRANSFER_DATE) ?? null;
   },
 };

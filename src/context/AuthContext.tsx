@@ -27,6 +27,7 @@ interface AuthContextValue {
   signup: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  guestLogin: () => Promise<void>;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -38,6 +39,7 @@ const AuthContext = createContext<AuthContextValue>({
   signup: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
+  guestLogin: async () => {},
 });
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -217,6 +219,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  const guestLogin = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const guestUser: User = {
+        id: 'guest_' + Math.random().toString(36).substring(7),
+        name: 'Guest User',
+        email: 'guest@shareit.io',
+        plan: 'free',
+      };
+      setUser(guestUser);
+      authStorage.setUser(guestUser);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -227,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signup,
         logout,
         refreshUser,
+        guestLogin,
       }}
     >
       {children}

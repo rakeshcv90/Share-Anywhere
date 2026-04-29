@@ -39,6 +39,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import Share from 'react-native-share';
 import RNFS from 'react-native-fs';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../context/SubscriptionContext';
+import UpgradePromptModal from '../components/modals/UpgradePromptModal';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 
@@ -461,6 +463,7 @@ const TransferProgress = ({
   colors,
   isPaused,
   onTogglePause,
+  connectedDevices,
 }) => {
   const isBatchActive = totalFiles > 0 && remainingFiles > 0;
   const isFinished = totalFiles > 0 && remainingFiles === 0;
@@ -536,7 +539,7 @@ const TransferProgress = ({
                   {isFinished
                     ? 'Transfer Complete'
                     : activeFile
-                    ? `${isSent ? 'Sending' : 'Receiving'} ${
+                    ? `${isSent ? 'Broadcasting to ' + connectedDevices.length + ' receivers' : 'Receiving'} ${
                         completedFiles + 1
                       } of ${totalFiles} files${isPaused ? ' (Paused)' : ''}`
                     : `Preparing next file... (${completedFiles} of ${totalFiles} done)`}
@@ -716,7 +719,7 @@ const TransferProgress = ({
 const ConnectionScreen = () => {
   const navigation = useNavigation();
   const {
-    connectedDevice,
+    connectedDevices,
     disconnect,
     sendFileAck,
     sentFiles,
@@ -747,6 +750,20 @@ const ConnectionScreen = () => {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const selectionAnim = useRef(new Animated.Value(0)).current;
   const isIntentionalNavigation = useRef(false);
+
+  // Subscription enforcement
+  const {
+    canTransferFile,
+    canSendFileSize,
+    markTransferUsed,
+    currentPlan,
+    dailyTransferCount,
+    maxTransfersPerDay,
+    maxFileSize,
+  } = useSubscription();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeType, setUpgradeType] = useState('transfer_limit');
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   const [confirmModal, setConfirmModal] = useState({
     visible: false,
@@ -1007,14 +1024,32 @@ const ConnectionScreen = () => {
   };
 
   const handleGoBack = () => {
-    navigation.goBack();
+    if (isConnected) {
+      handleDisconnectRequest();
+    } else {
+      navigation.goBack();
+    }
   };
 
   const handleDisconnectRequest = () => {
+    if (activeFileId) {
+      triggerConfirmModal({
+        title: 'Transfer in Progress',
+        message: 'Are you sure you want to stop the current transfer and disconnect from all devices?',
+        onConfirm: () => {
+          isIntentionalNavigation.current = true;
+          disconnect();
+          resetAndNavigate('HomeScreen');
+        },
+      });
+      return;
+    }
+
     triggerConfirmModal({
       title: 'Disconnect Now?',
-      message:
-        'Are you sure you want to disconnect? This will cancel any ongoing transfers.',
+      message: connectedDevices.length > 1 
+        ? `Are you sure you want to disconnect from all ${connectedDevices.length} devices?`
+        : `Are you sure you want to disconnect from ${connectedDevices[0]?.name || 'the device'}?`,
       type: 'warning',
       confirmText: 'Disconnect',
       cancelText: 'Stay',
@@ -1029,6 +1064,33 @@ const ConnectionScreen = () => {
   const onMediaPickedUp = media => {
     if (!media || !Array.isArray(media) || media.length === 0) return;
     setShowSummary(false);
+
+    // ── Subscription: Check daily transfer limit ──
+    if (!canTransferFile()) {
+      setUpgradeType('transfer_limit');
+      setUpgradeMessage(
+        `You've used all ${maxTransfersPerDay} free transfers today. Upgrade to get unlimited transfers.`,
+      );
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // ── Subscription: Check file size for each file ──
+    const oversizedFile = media.find(
+      m => (m.fileSize || m.size || 0) > maxFileSize && maxFileSize !== -1,
+    );
+    if (oversizedFile) {
+      const fileSize = oversizedFile.fileSize || oversizedFile.size || 0;
+      setUpgradeType('file_size');
+      setUpgradeMessage(
+        `"${oversizedFile.fileName || 'File'}" is ${formatFileSize(fileSize)} which exceeds your ${formatFileSize(maxFileSize)} limit. Upgrade your plan to send larger files.`,
+      );
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Mark transfer as used
+    markTransferUsed();
 
     // Null-safe video categorization
     const isVideo = m => {
@@ -1064,7 +1126,35 @@ const ConnectionScreen = () => {
   };
 
   const onFilePickedUp = files => {
+    if (!files || files.length === 0) return;
     setShowSummary(false);
+
+    // ── Subscription: Check daily transfer limit ──
+    if (!canTransferFile()) {
+      setUpgradeType('transfer_limit');
+      setUpgradeMessage(
+        `You've used all ${maxTransfersPerDay} free transfers today. Upgrade to get unlimited transfers.`,
+      );
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // ── Subscription: Check file size for each file ──
+    const oversizedFile = files.find(
+      f => (f.size || 0) > maxFileSize && maxFileSize !== -1,
+    );
+    if (oversizedFile) {
+      setUpgradeType('file_size');
+      setUpgradeMessage(
+        `"${oversizedFile.name || 'File'}" is ${formatFileSize(oversizedFile.size || 0)} which exceeds your ${formatFileSize(maxFileSize)} limit. Upgrade your plan to send larger files.`,
+      );
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Mark transfer as used
+    markTransferUsed();
+
     sendBatchAck(files, 'file');
   };
 
@@ -1566,19 +1656,22 @@ const ConnectionScreen = () => {
 
                       <View style={styles.headerTextGroup}>
                         <CustomeText
-                          fontSize={15}
+                          fontSize={14}
                           fontFamily="Okra-Bold"
                           color={colors.text}
-                          numberOfLines={1}
                         >
-                          {connectedDevice || 'Unknown Device'}
+                          {connectedDevices.length > 1 
+                            ? `${connectedDevices.length} Devices Connected` 
+                            : connectedDevices[0]?.name || 'Unknown Device'}
                         </CustomeText>
                         <CustomeText
                           fontSize={10}
                           color={colors.subtext}
                           fontFamily="Okra-Medium"
                         >
-                          Active Connection
+                          {connectedDevices.length > 1 
+                            ? connectedDevices.map(d => d.name).join(', ') 
+                            : 'Connected and Ready'}
                         </CustomeText>
                       </View>
                     </View>
@@ -1634,6 +1727,7 @@ const ConnectionScreen = () => {
                   colors={colors}
                   isPaused={isPaused}
                   onTogglePause={togglePause}
+                  connectedDevices={connectedDevices}
                 />
 
                 {/* Files Section */}
@@ -1919,6 +2013,13 @@ const ConnectionScreen = () => {
           </Animated.View>
         )}
       </LinearGradient>
+
+      <UpgradePromptModal
+        visible={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        type={upgradeType}
+        message={upgradeMessage}
+      />
     </>
   );
 };

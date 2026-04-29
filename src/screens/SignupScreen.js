@@ -20,6 +20,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from '../components/global/Icon';
 import { useTheme } from '../context/ThemeContext';
 import { navigate, goBack } from '../utils/NavigationUtil';
+import FullScreenLoader from '../components/global/FullScreenLoader';
 
 const { width, height } = Dimensions.get('window');
 
@@ -641,24 +642,18 @@ const SignupScreen = () => {
                 disabled={isLoading}
               >
                 <LinearGradient
-                  colors={isLoading ? ['#4A5568', '#2D3748'] : ['#FF6B00', '#FF9500']}
+                  colors={['#FF6B00', '#FF9500']}
                   style={styles.signupBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.signupBtnText}>Create Account</Text>
-                      <Icon
-                        name="arrow-forward"
-                        iconFamily="Ionicons"
-                        size={20}
-                        color="#fff"
-                      />
-                    </>
-                  )}
+                  <Text style={styles.signupBtnText}>Create Account</Text>
+                  <Icon
+                    name="arrow-forward"
+                    iconFamily="Ionicons"
+                    size={20}
+                    color="#fff"
+                  />
                 </LinearGradient>
               </TouchableOpacity>
 
@@ -692,6 +687,8 @@ const SignupScreen = () => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <FullScreenLoader visible={isLoading} message="Creating account..." />
     </View>
   );
 };

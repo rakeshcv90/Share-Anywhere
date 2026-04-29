@@ -20,6 +20,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from '../components/global/Icon';
 import { useTheme } from '../context/ThemeContext';
 import { navigate, goBack } from '../utils/NavigationUtil';
+import FullScreenLoader from '../components/global/FullScreenLoader';
 
 const { width, height } = Dimensions.get('window');
 
@@ -404,21 +405,19 @@ const ForgotPasswordScreen = () => {
                 style={{ marginTop: 10 }}
               >
                 <LinearGradient
-                  colors={(isLoading || isSuccess) ? ['#4A5568', '#2D3748'] : ['#FF6B00', '#FF9500']}
+                  colors={isSuccess ? ['#10B981', '#059669'] : ['#FF6B00', '#FF9500']}
                   style={styles.actionBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : isSuccess ? (
-                     <>
+                  {isSuccess ? (
+                    <>
                       <Text style={styles.actionBtnText}>Link Sent!</Text>
                       <Icon
                         name="checkmark"
                         iconFamily="Ionicons"
                         size={20}
-                        color="#10B981"
+                        color="#fff"
                       />
                     </>
                   ) : (
@@ -438,6 +437,8 @@ const ForgotPasswordScreen = () => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <FullScreenLoader visible={isLoading} message="Sending link..." />
     </View>
   );
 };

@@ -1,3 +1,4 @@
+/* eslint-disable react-native/no-inline-styles */
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -19,13 +20,19 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from '../components/global/Icon';
 import { useTheme } from '../context/ThemeContext';
-import { navigate } from '../utils/NavigationUtil';
+import { useAuth } from '../context/AuthContext';
+import { navigate, replace, resetAndNavigate } from '../utils/NavigationUtil';
+import FullScreenLoader from '../components/global/FullScreenLoader';
 
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
   const { colors, isDark } = useTheme();
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const styles = React.useMemo(
+    () => getStyles(colors, isDark),
+    [colors, isDark],
+  );
+  const { login, guestLogin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -215,16 +222,35 @@ const LoginScreen = () => {
     if (!validate()) return;
 
     setIsLoading(true);
-    // Simulated network delay
-    setTimeout(() => {
+    try {
+      await login(email, password);
+      resetAndNavigate('HomeScreen');
+    } catch (error) {
+      Alert.alert('Error', 'Invalid credentials.');
+    } finally {
       setIsLoading(false);
-      navigate('HomeScreen');
-    }, 1500);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    setIsLoading(true);
+    try {
+      await guestLogin();
+      resetAndNavigate('HomeScreen');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to enter as guest.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
 
       {/* Background Gradient */}
       <LinearGradient
@@ -317,10 +343,7 @@ const LoginScreen = () => {
                 styles.logoWrap,
                 {
                   opacity: logoOpacity,
-                  transform: [
-                    { scale: logoScale },
-                    { translateY: logoFloat },
-                  ],
+                  transform: [{ scale: logoScale }, { translateY: logoFloat }],
                 },
               ]}
             >
@@ -370,25 +393,33 @@ const LoginScreen = () => {
                     name="mail-outline"
                     iconFamily="Ionicons"
                     size={20}
-                    color={focusedInput === 'email' ? colors.accent : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                    color={
+                      focusedInput === 'email'
+                        ? colors.accent
+                        : isDark
+                        ? 'rgba(255,255,255,0.4)'
+                        : 'rgba(0,0,0,0.3)'
+                    }
                   />
                   <TextInput
                     style={styles.input}
                     placeholder="you@example.com"
-                    placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'}
+                    placeholderTextColor={
+                      isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'
+                    }
                     value={email}
                     onFocus={() => setFocusedInput('email')}
                     onBlur={() => setFocusedInput(null)}
-                    onChangeText={(t) => {
+                    onChangeText={t => {
                       setEmail(t);
-                      if (hasSubmitted && errors.email) setErrors((e) => ({ ...e, email: undefined }));
+                      if (hasSubmitted && errors.email)
+                        setErrors(e => ({ ...e, email: undefined }));
                     }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="next"
                     onSubmitEditing={() => passwordRef.current?.focus()}
-                    blurOnSubmit={false}
                   />
                 </View>
                 {hasSubmitted && errors.email && (
@@ -410,30 +441,43 @@ const LoginScreen = () => {
                     name="lock-closed-outline"
                     iconFamily="Ionicons"
                     size={20}
-                    color={focusedInput === 'password' ? colors.accent : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
+                    color={
+                      focusedInput === 'password'
+                        ? colors.accent
+                        : isDark
+                        ? 'rgba(255,255,255,0.4)'
+                        : 'rgba(0,0,0,0.3)'
+                    }
                   />
                   <TextInput
                     ref={passwordRef}
                     style={styles.input}
                     placeholder="Enter your password"
-                    placeholderTextColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'}
+                    placeholderTextColor={
+                      isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)'
+                    }
                     value={password}
                     onFocus={() => setFocusedInput('password')}
                     onBlur={() => setFocusedInput(null)}
-                    onChangeText={(t) => {
+                    onChangeText={t => {
                       setPassword(t);
-                      if (hasSubmitted && errors.password) setErrors((e) => ({ ...e, password: undefined }));
+                      if (hasSubmitted && errors.password)
+                        setErrors(e => ({ ...e, password: undefined }));
                     }}
                     secureTextEntry={!showPassword}
                     returnKeyType="done"
                     onSubmitEditing={handleLogin}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
                     <Icon
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       iconFamily="Ionicons"
                       size={20}
-                      color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}
+                      color={
+                        isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'
+                      }
                     />
                   </TouchableOpacity>
                 </View>
@@ -457,25 +501,29 @@ const LoginScreen = () => {
                 disabled={isLoading}
               >
                 <LinearGradient
-                  colors={isLoading ? ['#4A5568', '#2D3748'] : ['#FF6B00', '#FF9500']}
+                  colors={['#FF6B00', '#FF9500']}
                   style={styles.loginBtn}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.loginBtnText}>Sign In</Text>
-                      <Icon
-                        name="arrow-forward"
-                        iconFamily="Ionicons"
-                        size={20}
-                        color="#fff"
-                      />
-                    </>
-                  )}
+                  <Text style={styles.loginBtnText}>Sign In</Text>
+                  <Icon
+                    name="arrow-forward"
+                    iconFamily="Ionicons"
+                    size={20}
+                    color="#fff"
+                  />
                 </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Guest Login */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={handleGuestLogin}
+                disabled={isLoading}
+                style={styles.guestBtn}
+              >
+                <Text style={styles.guestBtnText}>Continue as Guest</Text>
               </TouchableOpacity>
 
               {/* Divider */}
@@ -488,11 +536,21 @@ const LoginScreen = () => {
               {/* Social Buttons */}
               <View style={styles.socialRow}>
                 <TouchableOpacity style={styles.socialBtn}>
-                  <Icon name="logo-google" iconFamily="Ionicons" size={22} color="#DB4437" />
+                  <Icon
+                    name="logo-google"
+                    iconFamily="Ionicons"
+                    size={22}
+                    color="#DB4437"
+                  />
                 </TouchableOpacity>
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity style={styles.socialBtn}>
-                    <Icon name="logo-apple" iconFamily="Ionicons" size={22} color="#fff" />
+                    <Icon
+                      name="logo-apple"
+                      iconFamily="Ionicons"
+                      size={22}
+                      color="#000"
+                    />
                   </TouchableOpacity>
                 )}
               </View>
@@ -508,256 +566,274 @@ const LoginScreen = () => {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Global Loader */}
+      <FullScreenLoader visible={isLoading} message="Authenticating..." />
     </View>
   );
 };
 
-const getStyles = (colors, isDark) => StyleSheet.create({
-  container: { flex: 1 },
-  flex: { flex: 1 },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 50,
-  },
+const getStyles = (colors, isDark) =>
+  StyleSheet.create({
+    container: { flex: 1 },
+    flex: { flex: 1 },
+    scrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 60,
+      paddingBottom: 50,
+    },
 
-  // ── Ambient Space Pattern ──
-  ambientGlowTop: {
-    position: 'absolute',
-    top: -height * 0.15,
-    right: -width * 0.3,
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-    backgroundColor: 'rgba(255,107,0,0.08)',
-  },
-  ambientGlowCenter: {
-    position: 'absolute',
-    width: width * 1.2,
-    height: width * 1.2,
-    borderRadius: width * 0.6,
-    backgroundColor: 'rgba(255,107,0,0.06)',
-    top: '30%',
-    left: '-10%',
-  },
-  floatingDot: {
-    position: 'absolute',
-    backgroundColor: '#FF8C00',
-  },
+    // ── Ambient Space Pattern ──
+    ambientGlowTop: {
+      position: 'absolute',
+      top: -height * 0.15,
+      right: -width * 0.3,
+      width: width * 0.8,
+      height: width * 0.8,
+      borderRadius: width * 0.4,
+      backgroundColor: 'rgba(255,107,0,0.08)',
+    },
+    ambientGlowCenter: {
+      position: 'absolute',
+      width: width * 1.2,
+      height: width * 1.2,
+      borderRadius: width * 0.6,
+      backgroundColor: 'rgba(255,107,0,0.06)',
+      top: '30%',
+      left: '-10%',
+    },
+    floatingDot: {
+      position: 'absolute',
+      backgroundColor: '#FF8C00',
+    },
 
-  // ── Logo ──
-  logoSection: {
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  ring: {
-    position: 'absolute',
-    borderWidth: 1.5,
-    borderColor: '#FF9500',
-  },
-  ring1: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderColor: '#FF6B00',
-  },
-  ring2: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderStyle: 'dashed',
-  },
-  logoGlow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255,107,0,0.15)',
-  },
-  logoWrap: {
-    marginBottom: 16,
-    shadowColor: '#FF6B00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  logoBg: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,149,0,0.25)',
-  },
-  logoImage: {
-    width: 96,
-    height: 96,
-    resizeMode: 'contain',
-    borderRadius: 26,
-  },
-  appName: {
-    color: colors.text,
-    fontSize: 26,
-    fontFamily: 'Okra-Bold',
-    letterSpacing: 2,
-    textShadowColor: isDark ? 'rgba(255,107,0,0.5)' : 'rgba(255,107,0,0.2)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  tagline: {
-    color: colors.subtext,
-    fontSize: 14,
-    fontFamily: 'Okra-Medium',
-    marginTop: 6,
-  },
+    // ── Logo ──
+    logoSection: {
+      alignItems: 'center',
+      marginBottom: 36,
+    },
+    ring: {
+      position: 'absolute',
+      borderWidth: 1.5,
+      borderColor: '#FF9500',
+    },
+    ring1: {
+      width: 160,
+      height: 160,
+      borderRadius: 80,
+      borderColor: '#FF6B00',
+    },
+    ring2: {
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      borderStyle: 'dashed',
+    },
+    logoGlow: {
+      position: 'absolute',
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      backgroundColor: 'rgba(255,107,0,0.15)',
+    },
+    logoWrap: {
+      marginBottom: 16,
+      shadowColor: '#FF6B00',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 15,
+    },
+    logoBg: {
+      width: 96,
+      height: 96,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,149,0,0.25)',
+    },
+    logoImage: {
+      width: 96,
+      height: 96,
+      resizeMode: 'contain',
+      borderRadius: 26,
+    },
+    appName: {
+      color: colors.text,
+      fontSize: 26,
+      fontFamily: 'Okra-Bold',
+      letterSpacing: 2,
+      textShadowColor: isDark ? 'rgba(255,107,0,0.5)' : 'rgba(255,107,0,0.2)',
+      textShadowOffset: { width: 0, height: 0 },
+      textShadowRadius: 20,
+    },
+    tagline: {
+      color: colors.subtext,
+      fontSize: 14,
+      fontFamily: 'Okra-Medium',
+      marginTop: 6,
+    },
 
-  // ── Form ──
-  formCard: {
-    backgroundColor: colors.cardBg,
-    borderRadius: 28,
-    borderWidth: isDark ? 1 : 0,
-    borderColor: colors.border,
-    shadowColor: isDark ? '#000' : '#888',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: isDark ? 0.3 : 0.08,
-    shadowRadius: 24,
-    elevation: isDark ? 4 : 8,
-  },
-  formInner: {
-    padding: 22,
-  },
-  inputGroup: {
-    marginBottom: 18,
-  },
-  inputLabel: {
-    color: colors.subtext,
-    fontSize: 13,
-    fontFamily: 'Okra-Medium',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 16,
-    height: 54,
-    gap: 12,
-  },
-  inputFocused: {
-    borderColor: colors.accent,
-    borderWidth: 1.5,
-    backgroundColor: isDark ? 'rgba(255,107,0,0.05)' : 'rgba(255,107,0,0.03)',
-  },
-  inputError: {
-    borderColor: '#FF6B6B',
-  },
-  input: {
-    flex: 1,
-    color: colors.text,
-    fontSize: 15,
-    fontFamily: 'Okra-Medium',
-  },
-  errorText: {
-    color: '#FF6B6B',
-    fontSize: 12,
-    fontFamily: 'Okra-Medium',
-    marginTop: 6,
-    marginLeft: 4,
-  },
+    // ── Form ──
+    formCard: {
+      backgroundColor: colors.cardBg,
+      borderRadius: 28,
+      borderWidth: isDark ? 1 : 0,
+      borderColor: colors.border,
+      shadowColor: isDark ? '#000' : '#888',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: isDark ? 0.3 : 0.08,
+      shadowRadius: 24,
+      elevation: isDark ? 4 : 8,
+    },
+    formInner: {
+      padding: 22,
+    },
+    inputGroup: {
+      marginBottom: 18,
+    },
+    inputLabel: {
+      color: colors.subtext,
+      fontSize: 13,
+      fontFamily: 'Okra-Medium',
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      height: 54,
+      gap: 12,
+    },
+    inputFocused: {
+      borderColor: colors.accent,
+      borderWidth: 1.5,
+      backgroundColor: isDark ? 'rgba(255,107,0,0.05)' : 'rgba(255,107,0,0.03)',
+    },
+    inputError: {
+      borderColor: '#FF6B6B',
+    },
+    input: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 15,
+      fontFamily: 'Okra-Medium',
+    },
+    errorText: {
+      color: '#FF6B6B',
+      fontSize: 12,
+      fontFamily: 'Okra-Medium',
+      marginTop: 6,
+      marginLeft: 4,
+    },
 
-  // ── Forgot ──
-  forgotBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: 22,
-    marginTop: -4,
-  },
-  forgotText: {
-    color: '#FF9500',
-    fontSize: 13,
-    fontFamily: 'Okra-Medium',
-  },
+    // ── Forgot ──
+    forgotBtn: {
+      alignSelf: 'flex-end',
+      marginBottom: 22,
+      marginTop: -4,
+    },
+    forgotText: {
+      color: '#FF9500',
+      fontSize: 13,
+      fontFamily: 'Okra-Medium',
+    },
 
-  // ── Login Button ──
-  loginBtn: {
-    height: 56,
-    borderRadius: 18,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#FF6B00',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 17,
-    fontFamily: 'Okra-Bold',
-    letterSpacing: 0.5,
-  },
+    // ── Login Button ──
+    loginBtn: {
+      height: 56,
+      borderRadius: 18,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 10,
+      shadowColor: '#FF6B00',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.35,
+      shadowRadius: 12,
+      elevation: 8,
+    },
+    loginBtnText: {
+      color: '#fff',
+      fontSize: 17,
+      fontFamily: 'Okra-Bold',
+      letterSpacing: 0.5,
+    },
+    guestBtn: {
+      height: 54,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,149,0,0.3)' : 'rgba(255,107,0,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 12,
+    },
+    guestBtnText: {
+      color: colors.accent,
+      fontSize: 15,
+      fontFamily: 'Okra-Bold',
+    },
 
-  // ── Divider ──
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  dividerText: {
-    color: colors.subtext,
-    fontSize: 12,
-    fontFamily: 'Okra-Medium',
-    marginHorizontal: 12,
-  },
+    // ── Divider ──
+    divider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 24,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    dividerText: {
+      color: colors.subtext,
+      fontSize: 12,
+      fontFamily: 'Okra-Medium',
+      marginHorizontal: 12,
+    },
 
-  // ── Social ──
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  socialBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    // ── Social ──
+    socialRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 16,
+    },
+    socialBtn: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      backgroundColor: 'rgba(255,255,255,0.06)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.08)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  // ── Signup Link ──
-  signupLink: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 28,
-    paddingBottom: 20,
-  },
-  signupText: {
-    color: colors.subtext,
-    fontSize: 14,
-    fontFamily: 'Okra-Medium',
-  },
-  signupBold: {
-    color: '#FF9500',
-    fontSize: 14,
-    fontFamily: 'Okra-Bold',
-  },
-});
+    // ── Signup Link ──
+    signupLink: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 28,
+      paddingBottom: 20,
+    },
+    signupText: {
+      color: colors.subtext,
+      fontSize: 14,
+      fontFamily: 'Okra-Medium',
+    },
+    signupBold: {
+      color: '#FF9500',
+      fontSize: 14,
+      fontFamily: 'Okra-Bold',
+    },
+  });
 
 export default React.memo(LoginScreen);

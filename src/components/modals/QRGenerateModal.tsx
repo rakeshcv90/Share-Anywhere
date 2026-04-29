@@ -165,11 +165,11 @@ const QRGenerateModal: React.FC<ModalProps> = ({ visible, onClose }) => {
   }, [visible]);
 
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && visible) {
       onClose();
       setTimeout(() => navigate('ConnectionScreen'), 400);
     }
-  }, [isConnected, onClose]);
+  }, [isConnected, onClose, visible]);
 
   useEffect(() => {
     if (!visible) return;

@@ -241,11 +241,11 @@ const QRScannerModal: React.FC<ModalProps> = ({ visible, onClose }) => {
     };
   }, [codeFound]);
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && visible) {
       onClose();
       setTimeout(() => navigate('ConnectionScreen'), 350);
     }
-  }, [isConnected, onClose]);
+  }, [isConnected, onClose, visible]);
 
   const containerStyle = useAnimatedStyle(() => ({ opacity: fadeAnim.value }));
   const masterCardStyle = useAnimatedStyle(() => ({

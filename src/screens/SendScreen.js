@@ -35,12 +35,19 @@ import UpgradePromptModal from '../components/modals/UpgradePromptModal';
 const { width, height } = Dimensions.get('window');
 
 const SendScreen = () => {
-  const { isConnected, connectToServer } = useTCP();
+  const { isConnected, connectedDevices, connectToServer } = useTCP();
   const { colors, isDark } = useTheme();
-  const { canConnectUser } = useSubscription();
+  const {
+    canConnectUser,
+    currentPlan,
+    dailyTransferCount,
+    maxTransfersPerDay,
+  } = useSubscription();
   const [isScannerVisible, setIsScannerVisible] = useState(false);
   const [nearbyDevices, setNearbyDevices] = useState([]);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeType, setUpgradeType] = useState('user_limit');
+  const [connectingDevices, setConnectingDevices] = useState(new Set());
 
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -55,6 +62,7 @@ const SendScreen = () => {
   const dotFloat = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const wifiPulse = useRef(new Animated.Value(1)).current;
+  const buttonSlide = useRef(new Animated.Value(100)).current;
 
   useEffect(() => {
     Animated.loop(
@@ -178,12 +186,18 @@ const SendScreen = () => {
     const [connectionData, deviceName] = data.replace('tcp://', '').split('|');
     const [host, port] = connectionData.split(':');
 
+    // Check if already connecting or connected
+    if (connectingDevices.has(host) || connectedDevices.some(d => d.name === deviceName)) {
+      return;
+    }
+
     // Check subscription user limit before connecting
-    if (!canConnectUser(nearbyDevices.length)) {
+    if (!canConnectUser(connectedDevices.length)) {
       setShowUpgradeModal(true);
       return;
     }
 
+    setConnectingDevices(prev => new Set(prev).add(host));
     connectToServer(host, parseInt(port, 10), deviceName);
   };
 
@@ -196,16 +210,31 @@ const SendScreen = () => {
   };
 
   useEffect(() => {
-    if (isConnected) {
-      navigate('ConnectionScreen');
-    }
-  }, [isConnected]);
+    // Clear connecting state for host when it appears in connectedDevices
+    setConnectingDevices(prev => {
+      const next = new Set(prev);
+      connectedDevices.forEach(d => {
+        next.clear(); 
+      });
+      return next;
+    });
 
-  useEffect(() => {
-    if (isConnected) {
-      navigate('ConnectionScreen');
+    // Animate Start Transfer button
+    if (connectedDevices.length > 0) {
+      Animated.spring(buttonSlide, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(buttonSlide, {
+        toValue: 100,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
     }
-  }, []);
+  }, [connectedDevices, buttonSlide]);
 
   const listenForDevices = async () => {
     const server = dgram.createSocket({
@@ -454,6 +483,25 @@ const SendScreen = () => {
                   Searching for compatible devices...
                 </CustomeText>
 
+                {/* Remaining transfers pill for free users */}
+                {currentPlan === 'free' && (
+                  <View style={styles.transferPill}>
+                    <Icon
+                      name="swap-horizontal"
+                      iconFamily="Ionicons"
+                      size={12}
+                      color={dailyTransferCount < maxTransfersPerDay ? '#10B981' : '#EF4444'}
+                    />
+                    <CustomeText
+                      fontSize={11}
+                      fontFamily="Okra-Bold"
+                      color={dailyTransferCount < maxTransfersPerDay ? '#10B981' : '#EF4444'}
+                    >
+                      {dailyTransferCount}/{maxTransfersPerDay} transfers used today
+                    </CustomeText>
+                  </View>
+                )}
+
                 <View style={styles.divider}>
                   <View style={styles.dividerLine} />
                   <CustomeText color="rgba(255,255,255,0.3)" fontSize={10}>
@@ -599,7 +647,7 @@ const SendScreen = () => {
                     </View>
                   </View>
 
-                  {/* Nearby device bubbles */}
+                    {/* Nearby device bubbles */}
                   {nearbyDevices.map(device => {
                     const cx = lottieSize / 2;
                     const cy = lottieSize / 2;
@@ -609,6 +657,9 @@ const SendScreen = () => {
                     const y =
                       Math.sin((device.angle * Math.PI) / 180) *
                       device.distance;
+
+                    const isDeviceConnected = connectedDevices.some(d => d.name === device.name);
+                    const isDeviceConnecting = connectingDevices.has(device.fullAddress.split('|')[0].replace('tcp://', ''));
 
                     return (
                       <Animated.View
@@ -627,14 +678,32 @@ const SendScreen = () => {
                         ]}
                       >
                         <TouchableOpacity
-                          style={styles.deviceCard}
+                          style={[
+                            styles.deviceCard,
+                            isDeviceConnected && { borderColor: '#10B981', borderWeight: 2 }
+                          ]}
                           onPress={() => handleScan(device.fullAddress)}
                           activeOpacity={0.7}
+                          disabled={isDeviceConnected || isDeviceConnecting}
                         >
-                          <Image
-                            source={device.image}
-                            style={styles.deviceImg}
-                          />
+                          <View style={{ position: 'relative' }}>
+                            <Image
+                              source={device.image}
+                              style={styles.deviceImg}
+                            />
+                            {isDeviceConnected && (
+                               <View style={styles.statusBadge}>
+                                  <Icon name="checkmark-circle" iconFamily="Ionicons" size={12} color="#10B981" />
+                               </View>
+                            )}
+                            {isDeviceConnecting && (
+                               <View style={styles.statusBadge}>
+                                  <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                                    <Icon name="sync-outline" iconFamily="Ionicons" size={12} color={colors.accent} />
+                                  </Animated.View>
+                               </View>
+                            )}
+                          </View>
                           <View>
                             <CustomeText
                               numberOfLines={1}
@@ -651,7 +720,7 @@ const SendScreen = () => {
                               {[4, 6, 8, 10].map((h, j) => (
                                 <View
                                   key={j}
-                                  style={[styles.signalBar, { height: h }]}
+                                  style={[styles.signalBar, { height: h, backgroundColor: isDeviceConnected ? '#10B981' : colors.subtext }]}
                                 />
                               ))}
                             </View>
@@ -661,6 +730,30 @@ const SendScreen = () => {
                     );
                   })}
                 </Animated.View>
+
+                {/* Start Transfer Floating Button */}
+                {connectedDevices.length > 0 && (
+                  <Animated.View 
+                    style={[
+                      styles.startTransferContainer,
+                      { 
+                        opacity: fadeAnim,
+                        transform: [{ translateY: buttonSlide }]
+                      }
+                    ]}
+                  >
+                    <TouchableOpacity
+                      style={[styles.startTransferBtn, { backgroundColor: colors.accent }]}
+                      onPress={() => navigate('ConnectionScreen')}
+                      activeOpacity={0.8}
+                    >
+                      <CustomeText fontFamily="Okra-Bold" color="#fff" fontSize={14}>
+                        Start Transfer ({connectedDevices.length})
+                      </CustomeText>
+                      <Icon name="arrow-forward" iconFamily="Ionicons" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </Animated.View>
+                )}
               </View>
             </View>
           </View>
@@ -678,7 +771,7 @@ const SendScreen = () => {
       <UpgradePromptModal
         visible={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        type="user_limit"
+        type={upgradeType}
       />
     </>
   );
@@ -772,8 +865,43 @@ const styles = StyleSheet.create({
     shadowColor: '#00D2FF',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 10,
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+  },
+  startTransferContainer: {
+    position: 'absolute',
+    bottom: 40, // Moved up from -60 to a visible position
+    alignSelf: 'center',
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  startTransferBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 30,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   infoIcon: {
     width: 56,
@@ -781,6 +909,16 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  transferPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   divider: {
     flexDirection: 'row',

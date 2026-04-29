@@ -76,6 +76,14 @@ class TurboTransferModule: RCTEventEmitter {
     func stopTransfer(_ id: String) {
         setActive(id, false)
         setPaused(id, false)
+        
+        // Also stop all specific threads for this ID
+        lock.lock()
+        for key in activeTransfers.keys where key.hasPrefix("\(id)|") {
+            activeTransfers[key] = false
+        }
+        lock.unlock()
+        
         NSLog("[TurboTransfer] Stop signal received for: %@", id)
     }
 
@@ -98,21 +106,23 @@ class TurboTransferModule: RCTEventEmitter {
     @objc
     func sendFile(_ id: String, path: String, host: String, port: NSNumber) {
         let portInt = port.intValue
+        let transferKey = "\(id)|\(host)|\(portInt)"
         ioQueue.async { [weak self] in
             guard let self = self else { return }
             self.setActive(id, true)
+            self.setActive(transferKey, true)
 
             var socketFd: Int32 = -1
             var fileHandle: FileHandle? = nil
 
             defer {
-                self.removeActive(id)
+                self.removeActive(transferKey)
                 if socketFd >= 0 { close(socketFd) }
                 try? fileHandle?.close()
             }
 
             do {
-                guard self.isActive(id) else { return }
+                guard self.isActive(transferKey) && self.isActive(id) else { return }
 
                 // Resolve file path
                 var cleanPath = path
@@ -137,7 +147,7 @@ class TurboTransferModule: RCTEventEmitter {
 
                 // Connect with retry using POSIX sockets
                 socketFd = try self.connectWithRetry(host: host, port: portInt, id: id)
-                guard self.isActive(id) else { return }
+                guard self.isActive(transferKey) && self.isActive(id) else { return }
 
                 // Tune socket
                 self.tuneSocket(fd: socketFd)
@@ -151,10 +161,10 @@ class TurboTransferModule: RCTEventEmitter {
                 while true {
                     // Pause loop
                     while self.isPaused(id) {
-                        if !self.isActive(id) { break }
+                        if !self.isActive(transferKey) || !self.isActive(id) { break }
                         usleep(150_000)
                     }
-                    guard self.isActive(id) else {
+                    guard self.isActive(transferKey) && self.isActive(id) else {
                         NSLog("[TurboTransfer] Interrupted during send: %@", id)
                         break
                     }
@@ -168,7 +178,7 @@ class TurboTransferModule: RCTEventEmitter {
                         let typedPtr = baseAddr.assumingMemoryBound(to: UInt8.self)
                         var sent = 0
                         while sent < data.count {
-                            guard self.isActive(id) else { return sent }
+                            guard self.isActive(transferKey) && self.isActive(id) else { return sent }
                             let result = send(socketFd, typedPtr.advanced(by: sent), data.count - sent, 0)
                             if result < 0 {
                                 return -1
@@ -191,7 +201,7 @@ class TurboTransferModule: RCTEventEmitter {
                     }
                 }
 
-                if self.isActive(id) {
+                if self.isActive(transferKey) && self.isActive(id) {
                     let reportSize = fileSize > 0 ? fileSize : totalSent
                     self.emitProgress(id: id, transferred: reportSize, total: reportSize, type: "send")
                     self.safeEmit("onTurboComplete", body: [

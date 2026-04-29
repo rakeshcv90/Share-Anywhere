@@ -207,6 +207,15 @@ const ApiService = {
   setTokens,
   clearTokens,
 
+  // ── Subscription API ──
+  subscription: {
+    getStatus: () => request('GET', '/api/subscription/status'),
+    purchase: (planId: string) =>
+      request('POST', '/api/subscription/purchase', { planId }),
+    restore: () => request('POST', '/api/subscription/restore'),
+    cancel: () => request('POST', '/api/subscription/cancel'),
+  },
+
   // ── Config ──
   BASE_URL,
 };

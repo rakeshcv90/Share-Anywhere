@@ -41,6 +41,67 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - NitroIap (15.2.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - NitroModules
+    - openiap (= 2.1.0)
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - NitroModules (0.35.4):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-callinvoker
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - openiap (2.1.0)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -3237,6 +3298,8 @@ DEPENDENCIES:
   - glog (from `../node_modules/react-native/third-party-podspecs/glog.podspec`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
   - lottie-react-native (from `../node_modules/lottie-react-native`)
+  - NitroIap (from `../node_modules/react-native-iap`)
+  - NitroModules (from `../node_modules/react-native-nitro-modules`)
   - RCT-Folly (from `../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
@@ -3339,6 +3402,7 @@ SPEC REPOS:
   trunk:
     - CocoaAsyncSocket
     - lottie-ios
+    - openiap
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -3361,6 +3425,10 @@ EXTERNAL SOURCES:
     :tag: hermes-v0.14.0
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
+  NitroIap:
+    :path: "../node_modules/react-native-iap"
+  NitroModules:
+    :path: "../node_modules/react-native-nitro-modules"
   RCT-Folly:
     :podspec: "../node_modules/react-native/third-party-podspecs/RCT-Folly.podspec"
   RCTDeprecation:
@@ -3564,6 +3632,9 @@ SPEC CHECKSUMS:
   hermes-engine: e1f1e9075f4860d4664254c7831c059927d93df5
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 691b8363e8c591fb78a78254ff2517258891456b
+  NitroIap: 5f350396bda5c84e6e7d201a501900a3dc1f6116
+  NitroModules: b24827b7772f5a030aef074547a2393a6e03579e
+  openiap: 35b7ebf3b953bc3f24a57fcb5f98fc4dd30f1b04
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: a41bbdd9af30bf2e5715796b313e44ec43eefff1
   RCTRequired: 7be34aabb0b77c3cefe644528df0fa0afad4e4d0
