@@ -122,9 +122,9 @@ const HomeScreen = () => {
   }, [pendingSharedFiles.length, isConnected]);
 
   const inAppUpdates = React.useRef(null);
-  // Removed static bgAnim for theme compatibility
+ 
   useEffect(() => {
-    // ... any other mount logic if needed
+  
   }, []);
 
   useEffect(() => {
