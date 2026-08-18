@@ -219,7 +219,7 @@ export const receiveChunkAck = async (
   // 🚀 Precise Cumulative Byte Counting (Decoded)
   // We update the state with total bytes relative to file size to avoid bridge freeze.
   if (chunkNo % 32 === 0 || isLastChunk) {
-    const defaultChunkSize = 512 * 1024; // Turbo CHUNK_SIZE
+    const defaultChunkSize = 1024 * 1024; // CHUNK_SIZE (1MB)
     const bytesToUpdate = isLastChunk 
         ? chunkStore.size 
         : (chunkNo + 1) * defaultChunkSize;
@@ -417,18 +417,17 @@ export const sendChunkAck = async (
         console.log(`--- TCP: Chunk ${i} written.`);
       }
 
-      // 🌉 Bridge Throttling: delay every 2 chunks to keep the JS bridge responsive
-      // iOS delay is reduced for Turbo Mode (2ms is stable with Buffer slicing)
-      if (i % 2 === 0) {
-        const delay = Platform.OS === 'ios' ? 2 : 1;
-        await new Promise<void>(resolve => setTimeout(() => resolve(), delay));
+      // 🌉 Bridge Throttling: yield every 4 chunks to keep JS bridge responsive
+      // Minimal delay — just enough to prevent bridge saturation
+      if (i % 4 === 3) {
+        await new Promise<void>(resolve => setTimeout(() => resolve(), 0));
       }
 
       // 🚀 Batch progress updates to prevent UI thread from freezing
       const chunkBytes = (base64Chunk.length * 3) / 4;
       bytesSinceLastUpdate += chunkBytes;
 
-      if ((i - startChunkIndex) % 8 === 7 || i === end - 1) {
+      if ((i - startChunkIndex) % 16 === 15 || i === end - 1) {
         const bytesToUpdate = bytesSinceLastUpdate;
         bytesSinceLastUpdate = 0;
         setTotalSentBytes((prev: any) => prev + bytesToUpdate);

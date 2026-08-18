@@ -14,10 +14,13 @@ export const requestPhotoPermission = async () => {
     if (Platform.OS === 'ios') {
       permission = PERMISSIONS.IOS.PHOTO_LIBRARY;
     } else if (Platform.OS === 'android') {
-      permission =
-        Platform.Version >= 33
-          ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
-          : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+      // Android 13+ (API 33+): No permission needed — app uses the system photo picker
+      // which handles its own access. Only pre-13 needs READ_EXTERNAL_STORAGE.
+      if (Platform.Version >= 33) {
+        console.log('PHOTO PERMISSION: Using system photo picker on Android 13+, no permission needed ✅');
+        return true;
+      }
+      permission = PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
     } else {
       return;
     }

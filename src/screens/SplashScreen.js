@@ -35,7 +35,10 @@ const RING_RADII = { 1: 85, 2: 130, 3: 175, 4: 220 };
 
 const SplashScreen = () => {
   const { colors, isDark } = useTheme();
-  const styles = React.useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const styles = React.useMemo(
+    () => getStyles(colors, isDark),
+    [colors, isDark],
+  );
 
   const [appVersion] = useState(DeviceInfo.getVersion());
 
@@ -286,13 +289,13 @@ const SplashScreen = () => {
       ).start();
     });
 
-   
     const timeout = setTimeout(() => {
-      if (authStorage.isLoggedIn()) {
-        navigate('HomeScreen');
-      } else {
-        navigate('LoginScreen');
-      }
+      // if (authStorage.isLoggedIn()) {
+      //   navigate('HomeScreen');
+      // } else {
+      //   navigate('LoginScreen');
+      // }
+      navigate('HomeScreen');
     }, 3500);
 
     return () => clearTimeout(timeout);
@@ -320,9 +323,7 @@ const SplashScreen = () => {
 
   return (
     <LinearGradient
-
       colors={['#0F1E3A', '#1B2D50', '#1E3A5F']}
-
       style={styles.container}
       start={{ x: 0.2, y: 0 }}
       end={{ x: 0.8, y: 1 }}
@@ -569,195 +570,196 @@ const SplashScreen = () => {
   );
 };
 
-const getStyles = (colors, isDark) => StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+const getStyles = (colors, isDark) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  ambientGlowTop: {
-    position: 'absolute',
-    top: -height * 0.15,
-    right: -width * 0.3,
-    width: width * 0.8,
-    height: width * 0.8,
-    borderRadius: width * 0.4,
-    backgroundColor: 'rgba(255,107,0,0.08)',
-  },
+    ambientGlowTop: {
+      position: 'absolute',
+      top: -height * 0.15,
+      right: -width * 0.3,
+      width: width * 0.8,
+      height: width * 0.8,
+      borderRadius: width * 0.4,
+      backgroundColor: 'rgba(255,107,0,0.08)',
+    },
 
-  ambientGlowCenter: {
-    position: 'absolute',
-    width: width * 1.2,
-    height: width * 1.2,
-    borderRadius: width * 0.6,
-    backgroundColor: 'rgba(255,107,0,0.06)',
-  },
+    ambientGlowCenter: {
+      position: 'absolute',
+      width: width * 1.2,
+      height: width * 1.2,
+      borderRadius: width * 0.6,
+      backgroundColor: 'rgba(255,107,0,0.06)',
+    },
 
-  floatingDot: {
-    position: 'absolute',
-    backgroundColor: '#FF8C00',
-  },
+    floatingDot: {
+      position: 'absolute',
+      backgroundColor: '#FF8C00',
+    },
 
-  ringBase: {
-    position: 'absolute',
-    borderWidth: 1,
-  },
+    ringBase: {
+      position: 'absolute',
+      borderWidth: 1,
+    },
 
-  ring1: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    borderColor: '#FF6B00',
-    borderWidth: 1.5,
-  },
+    ring1: {
+      width: 170,
+      height: 170,
+      borderRadius: 85,
+      borderColor: '#FF6B00',
+      borderWidth: 1.5,
+    },
 
-  ring2: {
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderColor: '#FF8C00',
-  },
+    ring2: {
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      borderColor: '#FF8C00',
+    },
 
-  ring3: {
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    borderStyle: 'dashed',
-    borderColor: '#FF6B00',
-  },
+    ring3: {
+      width: 350,
+      height: 350,
+      borderRadius: 175,
+      borderStyle: 'dashed',
+      borderColor: '#FF6B00',
+    },
 
-  ring4: {
-    width: 440,
-    height: 440,
-    borderRadius: 220,
-    borderColor: '#FF8C00',
-  },
+    ring4: {
+      width: 440,
+      height: 440,
+      borderRadius: 220,
+      borderColor: '#FF8C00',
+    },
 
-  ringDot: {
-    position: 'absolute',
-    backgroundColor: '#FF9500',
-  },
+    ringDot: {
+      position: 'absolute',
+      backgroundColor: '#FF9500',
+    },
 
-  logoGlowOuter: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: '#FF6B00',
-  },
+    logoGlowOuter: {
+      position: 'absolute',
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: '#FF6B00',
+    },
 
-  logoGlowInner: {
-    position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: '#FF6B00',
-  },
+    logoGlowInner: {
+      position: 'absolute',
+      width: 170,
+      height: 170,
+      borderRadius: 85,
+      backgroundColor: '#FF6B00',
+    },
 
-  logoWrap: {
-    marginBottom: 28,
-    zIndex: 10,
-  },
+    logoWrap: {
+      marginBottom: 28,
+      zIndex: 10,
+    },
 
-  logoOuterRing: {
-    width: 130,
-    height: 130,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,107,0,0.25)',
-  },
+    logoOuterRing: {
+      width: 130,
+      height: 130,
+      borderRadius: 32,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,107,0,0.25)',
+    },
 
-  logoBg: {
-    width: 108,
-    height: 108,
-    borderRadius: 26,
-    overflow: 'hidden',
-    // Android shadow
-    elevation: 20,
-    // iOS shadow
-    shadowColor: '#FF6B00',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
-  },
+    logoBg: {
+      width: 108,
+      height: 108,
+      borderRadius: 26,
+      overflow: 'hidden',
+      // Android shadow
+      elevation: 20,
+      // iOS shadow
+      shadowColor: '#FF6B00',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.5,
+      shadowRadius: 25,
+    },
 
-  logo: {
-    width: 108,
-    height: 108,
-    resizeMode: 'cover',
-  },
+    logo: {
+      width: 108,
+      height: 108,
+      resizeMode: 'cover',
+    },
 
-  appName: {
-    color: colors.text,
-    fontSize: 34,
-    fontFamily: 'Okra-Bold',
-    letterSpacing: 1.5,
-    textShadowColor: isDark ? 'rgba(255,107,0,0.35)' : 'rgba(255,107,0,0.15)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 25,
-  },
+    appName: {
+      color: colors.text,
+      fontSize: 34,
+      fontFamily: 'Okra-Bold',
+      letterSpacing: 1.5,
+      textShadowColor: isDark ? 'rgba(255,107,0,0.35)' : 'rgba(255,107,0,0.15)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 25,
+    },
 
-  taglineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 40,
-  },
+    taglineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 12,
+      marginBottom: 40,
+    },
 
-  taglineText: {
-    color: colors.subtext,
-    fontSize: 13,
-    fontFamily: 'Okra-Medium',
-    letterSpacing: 1.5,
-  },
+    taglineText: {
+      color: colors.subtext,
+      fontSize: 13,
+      fontFamily: 'Okra-Medium',
+      letterSpacing: 1.5,
+    },
 
-  taglineDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FF6B00',
-    marginHorizontal: 10,
-    opacity: 0.6,
-  },
+    taglineDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: '#FF6B00',
+      marginHorizontal: 10,
+      opacity: 0.6,
+    },
 
-  loadingSection: {
-    position: 'absolute',
-    bottom: 60,
-    alignItems: 'center',
-  },
+    loadingSection: {
+      position: 'absolute',
+      bottom: 60,
+      alignItems: 'center',
+    },
 
-  loadingTrack: {
-    width: width * 0.45,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-    overflow: 'visible',
-  },
+    loadingTrack: {
+      width: width * 0.45,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      overflow: 'visible',
+    },
 
-  loadingBar: {
-    height: '100%',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
+    loadingBar: {
+      height: '100%',
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
 
-  loadingBarGlow: {
-    position: 'absolute',
-    top: -4,
-    height: 11,
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
+    loadingBarGlow: {
+      position: 'absolute',
+      top: -4,
+      height: 11,
+      borderRadius: 6,
+      overflow: 'hidden',
+    },
 
-  version: {
-    marginTop: 14,
-    color: colors.subtext,
-    fontSize: 13,
-    fontFamily: 'Okra-Medium',
-    letterSpacing: 1.5,
-  },
-});
+    version: {
+      marginTop: 14,
+      color: colors.subtext,
+      fontSize: 13,
+      fontFamily: 'Okra-Medium',
+      letterSpacing: 1.5,
+    },
+  });
 
 export default React.memo(SplashScreen);

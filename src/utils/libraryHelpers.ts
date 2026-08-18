@@ -264,25 +264,21 @@ export const formatFileSize = (sizeInBytes: number): string => {
 export const checkFilePermissions = async (): Promise<boolean> => {
   try {
     if (Platform.OS === 'android') {
-      // Android 13+ uses READ_MEDIA_IMAGES for photos
-      const readPermission = Platform.Version >= 33
-        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
-        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+      // Android 13+ (API 33+): No storage permission needed — app uses system pickers
+      // (photo picker / document picker) which handle their own media access.
+      if (Platform.Version >= 33) {
+        console.log('ANDROID STORAGE: Using system pickers on Android 13+, no permission needed ✅');
+        return true;
+      }
 
-      const writePermission = Platform.Version < 33
-        ? PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE
-        : null;
+      // Android < 13: Need READ/WRITE_EXTERNAL_STORAGE
+      const readPermission = PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+      const writePermission = PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE;
 
-      const permissionsToRequest = writePermission
-        ? [readPermission, writePermission]
-        : [readPermission];
-
-      const granted = await PermissionsAndroid.requestMultiple(permissionsToRequest);
+      const granted = await PermissionsAndroid.requestMultiple([readPermission, writePermission]);
 
       const readGranted = granted[readPermission] === PermissionsAndroid.RESULTS.GRANTED;
-      const writeGranted = writePermission
-        ? granted[writePermission] === PermissionsAndroid.RESULTS.GRANTED
-        : true;
+      const writeGranted = granted[writePermission] === PermissionsAndroid.RESULTS.GRANTED;
 
       if (readGranted && writeGranted) {
         console.log('ANDROID STORAGE PERMISSION GRANTED ✅');

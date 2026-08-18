@@ -34,8 +34,8 @@ const turboEvents = TurboTransfer
 import { useChunkStore } from '../db/chunkStore';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 
-const CHUNK_SIZE = 512 * 1024; // 🚀 512 KB per chunk (Turbo Optimized)
-const WINDOW_SIZE = 24; // 🚀 24 chunks in-flight (12MB) — Dynamic safety for iPhone receivers
+const CHUNK_SIZE = 1024 * 1024; // 🚀 1 MB per chunk (optimized for large file throughput)
+const WINDOW_SIZE = 32; // 🚀 32 chunks in-flight (32MB) — maximizes TCP pipeline utilization
 interface TCPContextType {
   server: any;
   client: any;
@@ -797,7 +797,7 @@ export const TCPProvider: FC<{ children: React.ReactNode }> = ({
                     setActiveFileTransferredBytes,
                   );
                 }
-              }, 6000);
+              }, 15000);
 
               console.log(
                 `--- NATIVE: Starting turbo-speed send reliably routed to: ${realTargetIp}:${parsedData.port}`,

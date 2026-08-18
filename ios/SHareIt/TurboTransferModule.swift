@@ -5,15 +5,16 @@ import React
 class TurboTransferModule: RCTEventEmitter {
 
     // ─── TUNING KNOBS (matching Android) ───
-    private static let BUFFER_SIZE = 512 * 1024          // 512 KB
-    private static let SOCKET_BUFFER = 1 * 1024 * 1024   // 1 MB OS-level send/recv buffer
+    private static let BUFFER_SIZE = 2 * 1024 * 1024      // 2 MB — optimal for large file throughput
+    private static let SOCKET_BUFFER = 4 * 1024 * 1024   // 4 MB OS-level send/recv buffer
     private static let CONNECT_RETRY_COUNT = 5
     private static let CONNECT_RETRY_DELAY_MS: UInt32 = 200_000 // microseconds
     private static let CONNECT_TIMEOUT_S: Int = 5
     private static let ACCEPT_TIMEOUT_S: Int = 15
     private static let BIND_RETRY_COUNT = 8
     private static let BIND_RETRY_DELAY_MS: UInt32 = 120_000    // microseconds
-    private static let PROGRESS_MIN_INTERVAL_MS: UInt64 = 400
+    private static let PROGRESS_MIN_INTERVAL_MS: UInt64 = 800   // Reduced JS bridge overhead
+    private static let SENDFILE_CHUNK: off_t = 8 * 1024 * 1024  // 8 MB chunks for sendfile()
 
     let appGroup = "group.com.shareanywhere.app"
 
@@ -103,11 +104,13 @@ class TurboTransferModule: RCTEventEmitter {
             self.setActive(id, true)
 
             var socketFd: Int32 = -1
+            var fileFd: Int32 = -1
             var fileHandle: FileHandle? = nil
 
             defer {
                 self.removeActive(id)
                 if socketFd >= 0 { close(socketFd) }
+                if fileFd >= 0 { close(fileFd) }
                 try? fileHandle?.close()
             }
 
@@ -128,11 +131,6 @@ class TurboTransferModule: RCTEventEmitter {
                 let attrs = try FileManager.default.attributesOfItem(atPath: cleanPath)
                 let fileSize = (attrs[.size] as? Int64) ?? -1
 
-                guard let fh = FileHandle(forReadingAtPath: cleanPath) else {
-                    throw NSError(domain: "TurboTransfer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot open file for reading: \(cleanPath)"])
-                }
-                fileHandle = fh
-
                 NSLog("[TurboTransfer] SEND START: %@ (%lldKB) → %@:%d", (cleanPath as NSString).lastPathComponent, fileSize / 1024, host, portInt)
 
                 // Connect with retry using POSIX sockets
@@ -142,52 +140,114 @@ class TurboTransferModule: RCTEventEmitter {
                 // Tune socket
                 self.tuneSocket(fd: socketFd)
 
-                let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Self.BUFFER_SIZE)
-                defer { buffer.deallocate() }
-
                 var totalSent: Int64 = 0
                 var lastProgressTime: UInt64 = 0
+                var usedSendfile = false
 
-                while true {
-                    // Pause loop
-                    while self.isPaused(id) {
-                        if !self.isActive(id) { break }
-                        usleep(150_000)
-                    }
-                    guard self.isActive(id) else {
-                        NSLog("[TurboTransfer] Interrupted during send: %@", id)
-                        break
-                    }
+                // ══════════════════════════════════════════════════════════
+                //  🚀 ZERO-COPY PATH: Darwin sendfile()
+                //  Data flows: Disk → Kernel → Network
+                //  No userspace buffer copies!
+                // ══════════════════════════════════════════════════════════
+                fileFd = Darwin.open(cleanPath, O_RDONLY)
+                if fileFd >= 0 && fileSize > 0 {
+                    NSLog("[TurboTransfer] SEND: Using zero-copy sendfile() — %lld bytes", fileSize)
+                    var offset: off_t = 0
+                    usedSendfile = true
 
-                    let data = fh.readData(ofLength: Self.BUFFER_SIZE)
-                    if data.isEmpty { break } // EOF
-
-                    // Send all bytes (handle partial writes)
-                    let bytesSent = data.withUnsafeBytes { rawPtr -> Int in
-                        guard let baseAddr = rawPtr.baseAddress else { return 0 }
-                        let typedPtr = baseAddr.assumingMemoryBound(to: UInt8.self)
-                        var sent = 0
-                        while sent < data.count {
-                            guard self.isActive(id) else { return sent }
-                            let result = send(socketFd, typedPtr.advanced(by: sent), data.count - sent, 0)
-                            if result < 0 {
-                                return -1
-                            }
-                            sent += result
+                    while offset < fileSize {
+                        // Pause loop
+                        while self.isPaused(id) {
+                            if !self.isActive(id) { break }
+                            usleep(150_000)
                         }
-                        return sent
+                        guard self.isActive(id) else {
+                            NSLog("[TurboTransfer] Interrupted during send: %@", id)
+                            break
+                        }
+
+                        var len: off_t = min(Self.SENDFILE_CHUNK, off_t(fileSize) - offset)
+                        // Darwin sendfile: sendfile(fd, s, offset, &len, nil, 0)
+                        // fd = source file descriptor
+                        // s = destination socket descriptor
+                        let result = Darwin.sendfile(fileFd, socketFd, offset, &len, nil, 0)
+
+                        if result == 0 || (result == -1 && errno == EAGAIN) {
+                            // Success or partial write
+                            if len > 0 {
+                                offset += len
+                                totalSent = Int64(offset)
+                            } else if result == -1 {
+                                // EAGAIN with 0 bytes — socket buffer full, wait a bit
+                                usleep(1000)
+                                continue
+                            }
+                        } else {
+                            // sendfile failed — fall back to read/write
+                            NSLog("[TurboTransfer] sendfile() failed (errno: %d), falling back to read/write", errno)
+                            usedSendfile = false
+                            break
+                        }
+
+                        let now = Self.currentTimeMs()
+                        if now - lastProgressTime > Self.PROGRESS_MIN_INTERVAL_MS {
+                            self.emitProgress(id: id, transferred: totalSent, total: fileSize, type: "send")
+                            lastProgressTime = now
+                        }
+                    }
+                }
+
+                // ── Fallback: FileHandle read/write loop (if sendfile unavailable or failed) ──
+                if !usedSendfile {
+                    NSLog("[TurboTransfer] SEND: Using buffered read/write fallback")
+                    guard let fh = FileHandle(forReadingAtPath: cleanPath) else {
+                        throw NSError(domain: "TurboTransfer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Cannot open file for reading: \(cleanPath)"])
+                    }
+                    fileHandle = fh
+                    if totalSent > 0 {
+                        fh.seek(toFileOffset: UInt64(totalSent))
                     }
 
-                    if bytesSent < 0 {
-                        throw NSError(domain: "TurboTransfer", code: 4, userInfo: [NSLocalizedDescriptionKey: "send() failed (errno: \(errno))"])
-                    }
+                    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: Self.BUFFER_SIZE)
+                    defer { buffer.deallocate() }
 
-                    totalSent += Int64(data.count)
+                    while true {
+                        while self.isPaused(id) {
+                            if !self.isActive(id) { break }
+                            usleep(150_000)
+                        }
+                        guard self.isActive(id) else {
+                            NSLog("[TurboTransfer] Interrupted during send: %@", id)
+                            break
+                        }
 
-                    let now = Self.currentTimeMs()
-                    if now - lastProgressTime > Self.PROGRESS_MIN_INTERVAL_MS {
-                        self.emitProgress(id: id, transferred: totalSent, total: fileSize, type: "send")
-                        lastProgressTime = now
+                        let data = fh.readData(ofLength: Self.BUFFER_SIZE)
+                        if data.isEmpty { break }
+
+                        let bytesSent = data.withUnsafeBytes { rawPtr -> Int in
+                            guard let baseAddr = rawPtr.baseAddress else { return 0 }
+                            let typedPtr = baseAddr.assumingMemoryBound(to: UInt8.self)
+                            var sent = 0
+                            while sent < data.count {
+                                guard self.isActive(id) else { return sent }
+                                let result = send(socketFd, typedPtr.advanced(by: sent), data.count - sent, 0)
+                                if result < 0 { return -1 }
+                                sent += result
+                            }
+                            return sent
+                        }
+
+                        if bytesSent < 0 {
+                            throw NSError(domain: "TurboTransfer", code: 4, userInfo: [NSLocalizedDescriptionKey: "send() failed (errno: \(errno))"])
+                        }
+
+                        totalSent += Int64(data.count)
+
+                        let now = Self.currentTimeMs()
+                        if now - lastProgressTime > Self.PROGRESS_MIN_INTERVAL_MS {
+                            self.emitProgress(id: id, transferred: totalSent, total: fileSize, type: "send")
+                            lastProgressTime = now
+                        }
                     }
                 }
 
