@@ -493,7 +493,7 @@ const ConnectionHubScreen = () => {
               return (
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => !isConnected && handleNetworkPress(item)}
+                  // onPress={() => !isConnected && handleNetworkPress(item)}
                   style={[
                     styles.networkCard,
                     {
@@ -527,6 +527,7 @@ const ConnectionHubScreen = () => {
                     </View>
                   </View>
 
+                  {/* Connect functionality hidden - uncomment to re-enable
                   {isConnecting ? (
                     <ActivityIndicator size="small" color={colors.accent} />
                   ) : (
@@ -552,6 +553,7 @@ const ConnectionHubScreen = () => {
                       </Text>
                     </TouchableOpacity>
                   )}
+                  */}
                 </TouchableOpacity>
               );
             }}

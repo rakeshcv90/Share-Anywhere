@@ -2,6 +2,8 @@ package com.shareanywhere.app
 
 import com.facebook.react.bridge.*
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import android.content.pm.PackageManager
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.util.Log
 import java.io.*
@@ -372,6 +374,51 @@ class TurboTransferModule(private val reactContext: ReactApplicationContext) :
                 try { fos?.close() } catch (_: Exception) {}
                 try { socket?.close() } catch (_: Exception) {}
                 try { serverSocket?.close() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  INSTALLED APPS — Uses PackageManager (works on all Android versions)
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @ReactMethod
+    fun getInstalledApps(promise: Promise) {
+        ioPool.execute {
+            try {
+                val pm = reactContext.packageManager
+                val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+                val result = Arguments.createArray()
+                val ownPackage = reactContext.packageName
+
+                for (appInfo in packages) {
+                    // Skip system apps — only include user-installed apps
+                    if (appInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) continue
+                    // Skip our own app
+                    if (appInfo.packageName == ownPackage) continue
+
+                    try {
+                        val apkPath = appInfo.sourceDir
+                        val apkFile = File(apkPath)
+                        val size = apkFile.length()
+                        val label = pm.getApplicationLabel(appInfo).toString()
+
+                        val map = Arguments.createMap().apply {
+                            putString("packageName", appInfo.packageName)
+                            putString("label", label)
+                            putString("apkPath", apkPath)
+                            putDouble("size", size.toDouble())
+                        }
+                        result.pushMap(map)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Skipping app ${appInfo.packageName}: ${e.message}")
+                    }
+                }
+
+                promise.resolve(result)
+            } catch (e: Exception) {
+                Log.e(TAG, "getInstalledApps error: ${e.message}")
+                promise.reject("GET_APPS_ERROR", e.message)
             }
         }
     }

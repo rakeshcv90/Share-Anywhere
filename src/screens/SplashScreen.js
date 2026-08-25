@@ -693,7 +693,7 @@ const getStyles = (colors, isDark) =>
     },
 
     appName: {
-      color: colors.text,
+      color: '#fff',
       fontSize: 34,
       fontFamily: 'Okra-Bold',
       letterSpacing: 1.5,

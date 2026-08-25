@@ -122,10 +122,8 @@ const HomeScreen = () => {
   }, [pendingSharedFiles.length, isConnected]);
 
   const inAppUpdates = React.useRef(null);
- 
-  useEffect(() => {
-  
-  }, []);
+
+  useEffect(() => {}, []);
 
   useEffect(() => {
     inAppUpdates.current = new SpInAppUpdates(false);

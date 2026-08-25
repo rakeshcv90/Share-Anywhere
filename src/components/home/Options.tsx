@@ -14,6 +14,7 @@ import {
   Linking,
   Dimensions,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from '../global/Icon';
@@ -92,6 +93,14 @@ const homeOptions = [
 
 const transferOptions = [
   {
+    type: 'apps',
+    icon: 'apps',
+    family: 'Ionicons',
+    label: 'Apps',
+    desc: 'Send installed apps.',
+    colors: ['#60A5FA', '#2563EB'],
+  },
+  {
     type: 'image',
     icon: 'image',
     family: 'Ionicons',
@@ -151,7 +160,9 @@ const Options: React.FC<OptionsProps> = ({
   const { colors, isDark } = useTheme();
   let currentOptions = isHome ? homeOptions : transferOptions;
   if (Platform.OS === 'ios') {
-    currentOptions = currentOptions.filter(item => item.type !== 'nearby');
+    currentOptions = currentOptions.filter(
+      item => item.type !== 'nearby' && item.type !== 'apps',
+    );
   }
 
   const [contacts, setContacts] = useState<any[]>([]);
@@ -167,6 +178,15 @@ const Options: React.FC<OptionsProps> = ({
     isSuccess?: boolean;
     onConfirm: () => void;
   } | null>(null);
+
+  // Apps modal state
+  const [appModalVisible, setAppModalVisible] = useState(false);
+  const [installedApps, setInstalledApps] = useState<any[]>([]);
+  const [appsLoading, setAppsLoading] = useState(false);
+  const [appSearchQuery, setAppSearchQuery] = useState('');
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
+  const appModalAnim = useRef(new Animated.Value(screenHeight)).current;
+  const appModalOpacity = useRef(new Animated.Value(0)).current;
 
   const animations = useRef(
     [...Array(12)].map(() => new Animated.Value(0)),
@@ -349,7 +369,7 @@ const Options: React.FC<OptionsProps> = ({
       const cacheDir = RNFS.CachesDirectoryPath;
       await ReactNativeBlobUtil.fs.unlink(cacheDir).catch(() => {});
       await ReactNativeBlobUtil.fs.mkdir(cacheDir).catch(() => {});
-      
+
       handleOpenConfirmModal({
         title: 'Success!',
         message: 'Cache has been cleared successfully.',
@@ -365,36 +385,33 @@ const Options: React.FC<OptionsProps> = ({
 
   const handleClearStorage = async () => {
     try {
-      // 1. Reset UI State & History
-      setReceivedFiles([]);
-      setSentFiles([]);
-      setTotalReceivedBytes(0);
-      setTotalSentBytes(0);
-
-      // 2. Physical Deletion
+      // Only clear the app's internal temp/working directory.
+      // Received files saved in Pictures/Share-Anywhere and
+      // Download/Share-Anywhere are intentionally preserved.
       if (Platform.OS === 'ios') {
         const docDir = RNFS.DocumentDirectoryPath;
         const files = await RNFS.readDir(docDir);
         for (const f of files) {
-          if (f.name !== '.readme.txt') {
+          // Skip files that are user-received/saved content
+          if (f.name !== '.readme.txt' && !f.name.startsWith('received_')) {
             await ReactNativeBlobUtil.fs.unlink(f.path).catch(() => {});
           }
         }
       } else {
+        // Only wipe internal app temp directory, NOT the public received folders
         const externalDir = RNFS.ExternalDirectoryPath;
         await ReactNativeBlobUtil.fs.unlink(externalDir).catch(() => {});
         await ReactNativeBlobUtil.fs.mkdir(externalDir).catch(() => {});
-
-        const galleryDir = `${RNFS.ExternalStorageDirectoryPath}/Pictures/Share-Anywhere`;
-        await ReactNativeBlobUtil.fs.unlink(galleryDir).catch(() => {});
-
-        const downloadDir = `${RNFS.ExternalStorageDirectoryPath}/Download/Share-Anywhere`;
-        await ReactNativeBlobUtil.fs.unlink(downloadDir).catch(() => {});
+        // Note: Pictures/Share-Anywhere and Download/Share-Anywhere are NOT deleted
       }
+
+      // Reset only sent history; received files are still on device
+      setSentFiles([]);
+      setTotalSentBytes(0);
 
       handleOpenConfirmModal({
         title: 'Storage Cleaned',
-        message: 'All received files and transfer history have been removed.',
+        message: 'Temporary files cleared. Your received files are safe.',
         icon: 'sparkles',
         color: '#10B981',
         isSuccess: true,
@@ -403,6 +420,98 @@ const Options: React.FC<OptionsProps> = ({
     } catch (err) {
       Alert.alert('Error', 'Failed to clean storage.');
     }
+  };
+
+  const handleOpenAppsModal = () => {
+    setAppModalVisible(true);
+    setSelectedApps(new Set());
+    setAppSearchQuery('');
+    Animated.parallel([
+      Animated.spring(appModalAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 60,
+        useNativeDriver: true,
+      }),
+      Animated.timing(appModalOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bgFadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    handleLoadInstalledApps();
+  };
+
+  const handleCloseAppsModal = () => {
+    Animated.parallel([
+      Animated.timing(appModalAnim, {
+        toValue: screenHeight,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(appModalOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bgFadeAnim, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setAppModalVisible(false);
+      setInstalledApps([]);
+    });
+  };
+
+  const handleLoadInstalledApps = async () => {
+    setAppsLoading(true);
+    try {
+      // Use native PackageManager (works on Android 11+ unlike /data/app)
+      const { NativeModules: NM } = require('react-native');
+      const rawApps: any[] = await NM.TurboTransfer.getInstalledApps();
+      const apps = rawApps
+        .filter(a => a.apkPath && a.label)
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setInstalledApps(apps);
+    } catch (e) {
+      Alert.alert('Error', 'Could not load installed apps.');
+    } finally {
+      setAppsLoading(false);
+    }
+  };
+
+  const toggleAppSelection = (pkgName: string) => {
+    setSelectedApps(prev => {
+      const next = new Set(prev);
+      if (next.has(pkgName)) next.delete(pkgName);
+      else next.add(pkgName);
+      return next;
+    });
+  };
+
+  const handleSendSelectedApps = async () => {
+    if (selectedApps.size === 0) return;
+    if (!onFilePickedUp) {
+      Alert.alert('Not Connected', 'Open a connection to send apps.');
+      return;
+    }
+    handleCloseAppsModal();
+    const files = installedApps
+      .filter(app => selectedApps.has(app.packageName))
+      .map(app => ({
+        uri: `file://${app.apkPath}`,
+        name: `${app.label}.apk`,
+        size: app.size,
+        type: 'application/vnd.android.package-archive',
+      }));
+    onFilePickedUp(files);
   };
 
   const handleUniversalPicker = async (type: string) => {
@@ -461,6 +570,9 @@ const Options: React.FC<OptionsProps> = ({
             handleClearCache();
           },
         });
+        break;
+      case 'apps':
+        handleOpenAppsModal();
         break;
       default:
         Alert.alert('Coming Soon', 'This feature is under development.');
@@ -717,21 +829,21 @@ const Options: React.FC<OptionsProps> = ({
                     Settings
                   </CustomeText>
                 </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.permCancel}
-                    onPress={handleClosePermissionModal}
+                <TouchableOpacity
+                  style={styles.permCancel}
+                  onPress={handleClosePermissionModal}
+                >
+                  <CustomeText
+                    variant="h6"
+                    fontSize={14}
+                    color={colors.subtext}
+                    style={{}}
+                    onLayout={() => {}}
+                    numberOfLines={1}
                   >
-                    <CustomeText
-                      variant="h6"
-                      fontSize={14}
-                      color={colors.subtext}
-                      style={{}}
-                      onLayout={() => {}}
-                      numberOfLines={1}
-                    >
-                      Cancel
-                    </CustomeText>
-                  </TouchableOpacity>
+                    Cancel
+                  </CustomeText>
+                </TouchableOpacity>
               </Animated.View>
             </TouchableWithoutFeedback>
           </Animated.View>
@@ -772,13 +884,14 @@ const Options: React.FC<OptionsProps> = ({
                   },
                 ]}
               >
-                <Animated.View
-                  style={{ transform: [{ scale: iconPulse }] }}
-                >
+                <Animated.View style={{ transform: [{ scale: iconPulse }] }}>
                   <LinearGradient
                     colors={
                       confirmConfig
-                        ? [`${confirmConfig.color}20`, `${confirmConfig.color}05`]
+                        ? [
+                            `${confirmConfig.color}20`,
+                            `${confirmConfig.color}05`,
+                          ]
                         : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']
                     }
                     style={styles.confirmIconBg}
@@ -806,7 +919,11 @@ const Options: React.FC<OptionsProps> = ({
                     variant="h6"
                     fontSize={14}
                     color={colors.subtext}
-                    style={{ textAlign: 'center', marginTop: 10, lineHeight: 20 }}
+                    style={{
+                      textAlign: 'center',
+                      marginTop: 10,
+                      lineHeight: 20,
+                    }}
                   >
                     {confirmConfig?.message}
                   </CustomeText>
@@ -817,8 +934,7 @@ const Options: React.FC<OptionsProps> = ({
                     style={[
                       styles.confirmBtn,
                       {
-                        backgroundColor:
-                          confirmConfig?.color || colors.accent,
+                        backgroundColor: confirmConfig?.color || colors.accent,
                         shadowColor: confirmConfig?.color || colors.accent,
                       },
                     ]}
@@ -839,7 +955,11 @@ const Options: React.FC<OptionsProps> = ({
                     <TouchableOpacity
                       style={[
                         styles.cancelBtn,
-                        { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' },
+                        {
+                          borderColor: isDark
+                            ? 'rgba(255,255,255,0.1)'
+                            : 'rgba(0,0,0,0.05)',
+                        },
                       ]}
                       onPress={handleCloseConfirmModal}
                       activeOpacity={0.7}
@@ -962,9 +1082,13 @@ const Options: React.FC<OptionsProps> = ({
                           style={{}}
                           onLayout={() => {}}
                           numberOfLines={1}
-                        >{item.displayName || `${item.givenName || ''} ${
-                          item.familyName || ''
-                        }`.trim() || 'Unknown'}</CustomeText>
+                        >
+                          {item.displayName ||
+                            `${item.givenName || ''} ${
+                              item.familyName || ''
+                            }`.trim() ||
+                            'Unknown'}
+                        </CustomeText>
                         <CustomeText
                           variant="h6"
                           fontSize={12}
@@ -979,6 +1103,206 @@ const Options: React.FC<OptionsProps> = ({
                     </TouchableOpacity>
                   )}
                 />
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Apps Picker Modal - Android only */}
+      <Modal
+        visible={appModalVisible}
+        transparent
+        animationType="none"
+        onRequestClose={handleCloseAppsModal}
+      >
+        <TouchableWithoutFeedback onPress={handleCloseAppsModal}>
+          <Animated.View
+            style={[
+              styles.modalOverlay,
+              {
+                backgroundColor: bgFadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)'],
+                }),
+              },
+            ]}
+          >
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    opacity: appModalOpacity,
+                    transform: [{ translateY: appModalAnim }],
+                  },
+                ]}
+              >
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <CustomeText
+                    variant="h5"
+                    fontSize={18}
+                    fontFamily="Okra-Bold"
+                    color={colors.text}
+                    style={{}}
+                    onLayout={() => {}}
+                    numberOfLines={1}
+                  >
+                    Select Apps
+                  </CustomeText>
+                  <TouchableOpacity
+                    onPress={handleCloseAppsModal}
+                    hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                  >
+                    <Icon name="close" iconFamily="Ionicons" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Search */}
+                <TextInput
+                  style={[
+                    styles.searchBar,
+                    {
+                      backgroundColor: colors.background,
+                      color: colors.text,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  placeholder="Search apps..."
+                  placeholderTextColor={colors.subtext}
+                  value={appSearchQuery}
+                  onChangeText={setAppSearchQuery}
+                />
+
+                {/* App List */}
+                {appsLoading ? (
+                  <View style={styles.appsLoader}>
+                    <ActivityIndicator size="large" color={colors.accent} />
+                    <CustomeText
+                      variant="h6"
+                      fontSize={13}
+                      color={colors.subtext}
+                      style={{ marginTop: 12 }}
+                      onLayout={() => {}}
+                      numberOfLines={1}
+                    >
+                      Loading installed apps…
+                    </CustomeText>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={installedApps.filter(a =>
+                      a.label.toLowerCase().includes(appSearchQuery.toLowerCase()) ||
+                      a.packageName.toLowerCase().includes(appSearchQuery.toLowerCase()),
+                    )}
+                    keyExtractor={item => item.packageName}
+                    renderItem={({ item }) => {
+                      const isSelected = selectedApps.has(item.packageName);
+                      const sizeMB = (item.size / (1024 * 1024)).toFixed(1);
+                      return (
+                        <TouchableOpacity
+                          style={[
+                            styles.appItem,
+                            {
+                              borderBottomColor: colors.border,
+                              backgroundColor: isSelected
+                                ? `${colors.accent}15`
+                                : 'transparent',
+                            },
+                          ]}
+                          onPress={() => toggleAppSelection(item.packageName)}
+                          activeOpacity={0.7}
+                        >
+                          {/* App icon placeholder */}
+                          <View style={[styles.appIconBox, { backgroundColor: colors.border }]}>
+                            <Icon
+                              name="apps"
+                              iconFamily="Ionicons"
+                              size={22}
+                              color={colors.subtext}
+                            />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <CustomeText
+                              variant="h6"
+                              fontSize={14}
+                              fontFamily="Okra-Bold"
+                              color={colors.text}
+                              style={{}}
+                              onLayout={() => {}}
+                              numberOfLines={1}
+                            >
+                              {item.label}
+                            </CustomeText>
+                            <CustomeText
+                              variant="h6"
+                              fontSize={11}
+                              color={colors.subtext}
+                              style={{ marginTop: 1 }}
+                              onLayout={() => {}}
+                              numberOfLines={1}
+                            >
+                              {item.packageName} • {sizeMB} MB
+                            </CustomeText>
+                          </View>
+                          {/* Checkbox */}
+                          <View
+                            style={[
+                              styles.appCheckbox,
+                              {
+                                borderColor: isSelected ? colors.accent : colors.border,
+                                backgroundColor: isSelected ? colors.accent : 'transparent',
+                              },
+                            ]}
+                          >
+                            {isSelected && (
+                              <Icon name="checkmark" iconFamily="Ionicons" size={14} color="#fff" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }}
+                    ListEmptyComponent={
+                      <View style={styles.appsLoader}>
+                        <CustomeText
+                          variant="h6"
+                          fontSize={14}
+                          color={colors.subtext}
+                          style={{ textAlign: 'center' }}
+                          onLayout={() => {}}
+                          numberOfLines={2}
+                        >
+                          No apps found
+                        </CustomeText>
+                      </View>
+                    }
+                  />
+                )}
+
+                {/* Send button */}
+                {selectedApps.size > 0 && (
+                  <TouchableOpacity
+                    style={[styles.sendAppsBtn, { backgroundColor: colors.accent }]}
+                    onPress={handleSendSelectedApps}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="send" iconFamily="Ionicons" size={18} color="#fff" />
+                    <CustomeText
+                      variant="h6"
+                      fontSize={15}
+                      color="#fff"
+                      fontFamily="Okra-Bold"
+                      style={{ marginLeft: 8 }}
+                      onLayout={() => {}}
+                      numberOfLines={1}
+                    >
+                      Send {selectedApps.size} App{selectedApps.size > 1 ? 's' : ''}
+                    </CustomeText>
+                  </TouchableOpacity>
+                )}
               </Animated.View>
             </TouchableWithoutFeedback>
           </Animated.View>
@@ -1161,6 +1485,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
+  },
+  appItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 0.5,
+    gap: 12,
+  },
+  appIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appCheckbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  appsLoader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  sendAppsBtn: {
+    flexDirection: 'row',
+    margin: 16,
+    marginTop: 8,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 });
 

@@ -179,10 +179,10 @@ const SendScreen = () => {
     const [host, port] = connectionData.split(':');
 
     // Check subscription user limit before connecting
-    if (!canConnectUser(nearbyDevices.length)) {
-      setShowUpgradeModal(true);
-      return;
-    }
+    // if (!canConnectUser(nearbyDevices.length)) {
+    //   setShowUpgradeModal(true);
+    //   return;
+    // }
 
     connectToServer(host, parseInt(port, 10), deviceName);
   };
