@@ -28,6 +28,7 @@
     "react-native-circular-progress": "^1.4.1",
     "react-native-contacts": "^8.0.10",
     "react-native-device-info": "^15.0.1",
+    "react-native-fbsdk-next": "^13.4.3",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-get-random-values": "^2.0.0",

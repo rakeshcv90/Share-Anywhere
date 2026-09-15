@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TransferQueen</string>
+    <string name="facebook_app_id">1929797217701449</string>
+    <string name="facebook_client_token">568a54ab7462c235c617a368a9fd1784</string>
 </resources>
